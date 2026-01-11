@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Fonctions Affines : De Zéro à Héros</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Roboto+Slab:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- Babel pour JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Config Tailwind -->
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Poppins', 'sans-serif'],
+              serif: ['Roboto Slab', 'serif'],
+            },
+            colors: {
+              primary: '#007bff',
+              'primary-dark': '#0056b3',
+              secondary: '#ffc107',
+              'secondary-dark': '#d39e00',
+              accent: '#28a745',
+              error: '#dc3545',
+              bgLight: '#f8f9fa',
+            }
+          }
+        }
+      }
+    </script>
+    
+    <style>
+        body { font-family: 'Poppins', sans-serif; background-color: #f8f9fa; }
+        .custom-scroll::-webkit-scrollbar { width: 8px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        @keyframes bounceIn { 0% { opacity: 0; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1); } }
+        .animate-bounce-in { animation: bounceIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+    </style>
+
+    <!-- Import Map : Version STRICTE React 18.2.0 pour éviter les conflits -->
+    <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.2.0",
+    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+    "react-dom": "https://esm.sh/react-dom@18.2.0",
+    "recharts": "https://esm.sh/recharts@2.12.7?external=react,react-dom",
+    "lucide-react": "https://esm.sh/lucide-react@0.330.0?external=react",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/"
+  }
+}
+</script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect, useMemo, useRef } from 'react';
+        import ReactDOM from 'react-dom/client';
+        import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, ReferenceLine, Tooltip } from 'recharts';
+        import { 
+            BookOpen, PenTool, Award, Trophy, 
+            CheckCircle, XCircle, Timer, RotateCcw, 
+            Calculator, HelpCircle, TrendingUp, 
+            MoveVertical, GitCommit, MinusCircle 
+        } from 'lucide-react';
+
+        // --- 1. UTILS (MATHS) ---
+
+        const formatAffine = (m, p, includeY = false) => {
+            let mStr = "";
+            if (m === 0) mStr = "";
+            else if (m === 1) mStr = "x";
+            else if (m === -1) mStr = "-x";
+            else mStr = `${m}x`;
+
+            let pStr = "";
+            if (m === 0) pStr = `${p}`;
+            else {
+                if (p > 0) pStr = ` + ${p}`;
+                else if (p < 0) pStr = ` - ${Math.abs(p)}`;
+            }
+
+            const expr = (mStr + pStr).trim() || "0";
+            return includeY ? `y = ${expr}` : expr;
+        };
+
+        const parseFraction = (input) => {
+            if (!input) return NaN;
+            const clean = input.toString().replace(/\s/g, '').replace(',', '.');
+            if (clean.includes('/')) {
+                const [num, den] = clean.split('/');
+                const d = parseFloat(den);
+                return d === 0 ? NaN : parseFloat(num) / d;
+            }
+            return parseFloat(clean);
+        };
+
+        const parseLinearEquation = (input) => {
+            let clean = input.toLowerCase().replace(/\s/g, '').replace(',', '.');
+            if (clean.startsWith('y=')) clean = clean.substring(2);
+            if (clean.startsWith('f(x)=')) clean = clean.substring(5);
+
+            if (!clean.includes('x')) {
+                const p = parseFloat(clean);
+                return isNaN(p) ? null : { m: 0, p };
+            }
+
+            const xIndex = clean.indexOf('x');
+            let mPart = clean.substring(0, xIndex);
+            let pPart = clean.substring(xIndex + 1);
+
+            let m = 0;
+            if (mPart === '' || mPart === '+') m = 1;
+            else if (mPart === '-') m = -1;
+            else m = parseFraction(mPart);
+
+            let p = 0;
+            if (pPart === '') p = 0;
+            else p = parseFraction(pPart);
+
+            if (isNaN(m) || isNaN(p)) return null;
+            return { m, p };
+        };
+
+        const checkAnswer = (userRaw, correct, type) => {
+            if (!userRaw) return false;
+            const cleanUser = userRaw.trim();
+
+            if (type === 'YES_NO') {
+                const normalized = cleanUser.toLowerCase();
+                const isYes = ['oui', 'yes', 'vrai'].includes(normalized);
+                const isNo = ['non', 'no', 'faux'].includes(normalized);
+                const correctBool = correct === 'OUI';
+                return (correctBool && isYes) || (!correctBool && isNo);
+            }
+
+            if (type === 'TEXT') return cleanUser.toLowerCase() === String(correct).toLowerCase();
+
+            if (type === 'EQUATION') {
+                const target = parseLinearEquation(String(correct));
+                const attempt = parseLinearEquation(cleanUser);
+                if (!target || !attempt) return false;
+                return Math.abs(target.m - attempt.m) < 0.01 && Math.abs(target.p - attempt.p) < 0.01;
+            }
+
+            const valUser = parseFraction(cleanUser);
+            const valCorrect = typeof correct === 'number' ? correct : parseFraction(String(correct));
+            if (isNaN(valUser)) return false;
+            return Math.abs(valUser - valCorrect) < 0.01;
+        };
+
+        const generateUUID = () => {
+            if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+                return crypto.randomUUID();
+            }
+            return Math.random().toString(36).substring(2) + Date.now().toString(36);
+        };
+
+        // --- 2. GENERATEUR DE QUESTIONS ---
+
+        const getRandomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+        const getRandomNonZero = (min, max) => {
+            let val = 0;
+            while (val === 0) val = getRandomInt(min, max);
+            return val;
+        };
+
+        const generateQuestion = (mode) => {
+            const typeRoll = Math.random();
+            
+            // 1. DETERMINER L'EQUATION GRAPHIQUE (15%)
+            if (typeRoll < 0.15) {
+                const m = getRandomInt(-3, 3);
+                const p = getRandomInt(-4, 4);
+                const eq = formatAffine(m, p, true); 
+                return {
+                    id: generateUUID(),
+                    type: 'DETERMINE_FUNCTION_GRAPH',
+                    text: `Détermine l'expression analytique de la fonction représentée ci-dessous.`,
+                    correctAnswer: eq,
+                    answerType: 'EQUATION',
+                    graphData: { m, p },
+                    explanation: `On lit l'ordonnée à l'origine p=${p}. Pour la pente, on avance de 1 et on varie de ${m}. L'équation est ${eq}.`
+                };
+            }
+
+            // 2. EQUATION FROM TWO POINTS (20%)
+            if (typeRoll < 0.35) {
+                const m = getRandomInt(-4, 4);
+                const p = getRandomInt(-10, 10);
+                const x1 = getRandomInt(-5, 5);
+                let x2 = x1;
+                while(x2 === x1) x2 = getRandomInt(-5, 5);
+                const y1 = m * x1 + p;
+                const y2 = m * x2 + p;
+                const eq = formatAffine(m, p, true);
+
+                const isFunctionNotation = Math.random() > 0.5;
+                if (isFunctionNotation) {
+                    return {
+                        id: generateUUID(),
+                        type: 'FIND_FUNC_TWO_POINTS',
+                        text: `Détermine l'expression analytique de la fonction f telle que f(${x1}) = ${y1} et f(${x2}) = ${y2}.`,
+                        correctAnswer: eq,
+                        answerType: 'EQUATION',
+                        explanation: `Pente m = (${y2} - ${y1}) / (${x2} - (${x1})) = ${m}. Ensuite p = ${y1} - ${m}(${x1}) = ${p}. Réponse : ${eq}.`
+                    };
+                } else {
+                    return {
+                        id: generateUUID(),
+                        type: 'FIND_FUNC_TWO_POINTS',
+                        text: `Détermine l'expression analytique de la fonction g dont le graphique contient les points C(${x1}; ${y1}) et D(${x2}; ${y2}).`,
+                        correctAnswer: eq,
+                        answerType: 'EQUATION',
+                        explanation: `Pente m = (yD - yC) / (xD - xC) = ${m}. Ordonnée p = yC - m*xC = ${p}. Réponse : ${eq}.`
+                    };
+                }
+            }
+
+            // 3. PARALLEL + POINT (15%)
+            if (typeRoll < 0.50) {
+                const m = getRandomNonZero(-3, 3);
+                const pOld = getRandomInt(-5, 5);
+                const x = getRandomInt(-5, 5);
+                const y = getRandomInt(-5, 5);
+                const pNew = y - (m * x);
+                const eqOld = formatAffine(m, pOld, true);
+                const eqNew = formatAffine(m, pNew, true);
+
+                return {
+                    id: generateUUID(),
+                    type: 'FIND_FUNC_PARALLEL_POINT',
+                    text: `Détermine l'expression analytique de la fonction h dont le graphique contient le point P(${x}; ${y}) et est parallèle à la droite d'équation ${eqOld}.`,
+                    correctAnswer: eqNew,
+                    answerType: 'EQUATION',
+                    explanation: `Parallèle signifie même pente m = ${m}. On cherche p tel que ${y} = ${m}(${x}) + p => p = ${pNew}. Réponse : ${eqNew}.`
+                };
+            }
+
+            // 4. POINT MEMBERSHIP (10%)
+            if (typeRoll < 0.60) {
+                const m = getRandomInt(-3, 3);
+                const p = getRandomInt(-5, 5);
+                const x = getRandomInt(-5, 5);
+                const eq = formatAffine(m, p, true);
+                const isMember = Math.random() > 0.5;
+                const y = isMember ? (m * x + p) : (m * x + p + getRandomNonZero(-3, 3));
+
+                return {
+                    id: generateUUID(),
+                    type: 'POINT_MEMBERSHIP',
+                    text: `Le point B(${x}; ${y}) appartient-il à la droite d'équation ${eq} ? (Réponds par Oui ou Non)`,
+                    correctAnswer: isMember ? 'OUI' : 'NON',
+                    answerType: 'YES_NO',
+                    explanation: `On remplace x par ${x} dans l'équation : ${m}(${x}) ${p>=0?'+':''}${p} = ${m*x+p}. Comme cela ${isMember ? 'est égal' : "n'est pas égal"} à y (${y}), la réponse est ${isMember ? 'Oui' : 'Non'}.`
+                };
+            }
+
+            // 5. SIGN STUDY (10%)
+            if (typeRoll < 0.70) {
+                const m = getRandomNonZero(-4, 4);
+                const root = getRandomInt(-5, 5); 
+                const p = -root * m;
+                const func = formatAffine(m, p, true);
+
+                return {
+                    id: generateUUID(),
+                    type: 'SIGN_STUDY',
+                    text: `Soit ${func}. Pour quelle valeur de x la fonction s'annule-t-elle (la racine) ?`,
+                    correctAnswer: root,
+                    answerType: 'NUMBER',
+                    explanation: `On cherche la racine : ${m}x ${p>=0?'+':''}${p} = 0 ⇔ x = ${root}.`
+                };
+            }
+
+            // 6. FIND IMAGE (10%)
+            if (typeRoll < 0.80) {
+                const m = getRandomInt(-5, 5);
+                const p = getRandomInt(-10, 10);
+                const x = getRandomInt(-5, 5);
+                const answer = m * x + p;
+                const func = formatAffine(m, p, false);
+                return {
+                    id: generateUUID(),
+                    type: 'FIND_IMAGE',
+                    text: `Soit f(x) = ${func}. Calcule f(${x}).`,
+                    correctAnswer: answer,
+                    answerType: 'NUMBER',
+                    explanation: `f(${x}) = ${m}(${x}) + ${p} = ${answer}.`
+                };
+            }
+
+            // 7. FIND PREIMAGE (10%)
+            if (typeRoll < 0.90) {
+                const x = getRandomInt(-5, 5);
+                const m = getRandomNonZero(-5, 5);
+                const p = getRandomInt(-10, 10);
+                const target = m * x + p;
+                const func = formatAffine(m, p, false);
+                return {
+                    id: generateUUID(),
+                    type: 'FIND_PREIMAGE',
+                    text: `Soit f(x) = ${func}. Détermine l'antécédent de ${target}.`,
+                    correctAnswer: x,
+                    answerType: 'FRACTION', 
+                    explanation: `${m}x + ${p} = ${target} ⇔ ${m}x = ${target - p} ⇔ x = ${x}.`
+                };
+            }
+
+            // 8. FIND SLOPE (10%)
+            const m = getRandomInt(-5, 5);
+            const p = getRandomInt(-10, 10);
+            const x1 = getRandomInt(-5, 5);
+            let x2 = x1;
+            while (x2 === x1) x2 = getRandomInt(-5, 5);
+            const y1 = m * x1 + p;
+            const y2 = m * x2 + p;
+
+            return {
+                id: generateUUID(),
+                type: 'FIND_M',
+                text: `Une droite passe par A(${x1}; ${y1}) et B(${x2}; ${y2}). Calcule sa pente m.`,
+                correctAnswer: m,
+                answerType: 'FRACTION',
+                explanation: `m = (yB - yA) / (xB - xA) = (${y2} - ${y1}) / (${x2} - ${x1}) = ${m}.`
+            };
+        };
+
+        // --- 3. COMPOSANTS ---
+
+        const FunctionGraph = ({ m, p, showPoints = false, height = 400 }) => {
+            const data = useMemo(() => {
+                const points = [];
+                for (let x = -10; x <= 10; x++) { points.push({ x, y: m * x + p }); }
+                return points;
+            }, [m, p]);
+
+            return (
+                <div className="w-full bg-white rounded-lg border border-gray-200 shadow-inner p-2" style={{ height: `${height}px` }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={data} margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                            <XAxis dataKey="x" type="number" domain={[-10, 10]} tickCount={21} allowDataOverflow stroke="#6b7280" interval={0} tick={{fontSize: 10}} />
+                            <YAxis type="number" domain={[-10, 10]} tickCount={21} allowDataOverflow stroke="#6b7280" interval={0} tick={{fontSize: 10}} />
+                            <ReferenceLine x={0} stroke="#374151" strokeWidth={2} />
+                            <ReferenceLine y={0} stroke="#374151" strokeWidth={2} />
+                            <Line type="monotone" dataKey="y" stroke="#007bff" strokeWidth={3} dot={showPoints ? { r: 4, fill: '#ffc107', stroke: '#b45309' } : false} isAnimationActive={false} />
+                            <Tooltip contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #ddd' }} formatter={(value) => [value.toFixed(2), 'y']} labelFormatter={(label) => `x: ${label}`} />
+                        </LineChart>
+                    </ResponsiveContainer>
+                </div>
+            );
+        };
+
+        const LearningSection = () => {
+            const [tab, setTab] = useState('BASICS');
+            const [m, setM] = useState(1);
+            const [p, setP] = useState(0);
+            const [m2, setM2] = useState(1);
+            const [p2, setP2] = useState(-2);
+            const [ms, setMs] = useState(2);
+            const [ps, setPs] = useState(-4);
+
+            const TabButton = ({ id, label }) => (
+                <button onClick={() => setTab(id)} className={`px-4 py-2 rounded-full font-bold text-sm sm:text-base transition-colors ${tab === id ? 'bg-primary text-white shadow' : 'bg-white text-gray-600 hover:bg-gray-100 border border-transparent hover:border-gray-200'}`}>{label}</button>
+            );
+
+            return (
+                <div className="space-y-6 animate-fade-in pb-8">
+                    <div className="flex flex-col items-center gap-4">
+                        <h2 className="text-3xl font-serif text-primary-dark font-bold text-center">Comprendre y = mx + p</h2>
+                        <div className="flex flex-wrap justify-center gap-2 bg-gray-100 p-1.5 rounded-full">
+                            <TabButton id="BASICS" label="Bases" />
+                            <TabButton id="POSITIONS" label="Comparaison" />
+                            <TabButton id="SIGNS" label="Signes" />
+                        </div>
+                    </div>
+
+                    {tab === 'BASICS' && (
+                        <div className="grid lg:grid-cols-2 gap-8 items-start animate-fade-in">
+                            <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 space-y-6">
+                                <div className="text-center bg-blue-50 p-4 rounded-lg"><span className="text-2xl font-mono text-primary-dark font-bold">{formatAffine(m, p, true)}</span></div>
+                                <div className="space-y-2">
+                                    <label className="flex items-center gap-2 font-bold text-gray-700"><TrendingUp size={20} className="text-accent" /> Pente (m) : {m}</label>
+                                    <input type="range" min="-5" max="5" step="0.5" value={m} onChange={(e) => setM(parseFloat(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-accent" />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="flex items-center gap-2 font-bold text-gray-700"><MoveVertical size={20} className="text-orange-600" /> Ordonnée (p) : {p}</label>
+                                    <input type="range" min="-5" max="5" step="1" value={p} onChange={(e) => setP(parseFloat(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-600" />
+                                </div>
+                                <div className="mt-6 p-4 rounded-lg bg-gray-50 border border-gray-200">
+                                    <h4 className="font-bold text-primary-dark mb-2 flex items-center gap-2"><BookOpen size={18}/> Formules</h4>
+                                    <ul className="text-sm space-y-3">
+                                        <li><strong className="text-accent">Pente (m) :</strong> Variation verticale divisée par variation horizontale.<div className="bg-white p-2 rounded border mt-1 font-mono text-center">m = Δy / Δx</div></li>
+                                        <li><strong className="text-orange-600">Ordonnée (p) :</strong> Image de 0 (intersection axe Y).</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <FunctionGraph m={m} p={p} showPoints={true} height={450} />
+                        </div>
+                    )}
+
+                    {tab === 'POSITIONS' && (
+                        <div className="grid lg:grid-cols-2 gap-8 items-start animate-fade-in">
+                            <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 space-y-6">
+                                <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-primary"><GitCommit /> Comparaison</h3>
+                                <p className="text-sm text-gray-600 mb-4 bg-gray-100 p-2 rounded">Droite 1 (Fixe): <span className="font-mono font-bold">y = x + 1</span> (m=1)</p>
+                                <div className="text-center bg-gray-50 p-3 rounded font-mono font-bold text-accent">Droite 2 : {formatAffine(m2, p2, true)}</div>
+                                <input type="range" min="-4" max="4" step="0.5" value={m2} onChange={(e) => setM2(parseFloat(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg accent-accent" />
+                                <div className="mt-6 p-4 rounded-lg bg-blue-50 border border-blue-100">
+                                    <ul className="text-sm space-y-2">
+                                        <li className={m2 === 1 ? "text-green-600 font-bold" : "text-gray-500"}>⚡ Parallèles (m₁ = m₂) : {m2 === 1 ? "OUI" : "NON"}</li>
+                                        <li className={m2 === -1 ? "text-green-600 font-bold" : "text-gray-500"}>⚡ Perpendiculaires (m₁ × m₂ = -1) : {m2 === -1 ? "OUI" : "NON"}</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <FunctionGraph m={m2} p={p2} height={450} />
+                        </div>
+                    )}
+
+                    {tab === 'SIGNS' && (
+                        <div className="grid lg:grid-cols-2 gap-8 items-start animate-fade-in">
+                            <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 space-y-6">
+                                <div className="text-center bg-blue-50 p-4 rounded-lg"><span className="text-2xl font-mono text-primary-dark font-bold">f(x) = {formatAffine(ms, ps)}</span></div>
+                                <input type="range" min="-5" max="5" value={ms} onChange={(e) => setMs(parseFloat(e.target.value) || 1)} className="w-full h-2 bg-gray-200 rounded-lg accent-accent" />
+                                <input type="range" min="-10" max="10" value={ps} onChange={(e) => setPs(parseFloat(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg accent-orange-600" />
+                                <div className="mt-4">
+                                    <h4 className="font-bold text-primary mb-2 flex items-center gap-2"><MinusCircle size={18}/> Tableau de Signes</h4>
+                                    {ms === 0 ? <p className="text-red-500">Fonction constante.</p> : (
+                                        <div className="border border-gray-300 rounded overflow-x-auto text-center w-full">
+                                            <div className="min-w-[300px]">
+                                                <div className="grid grid-cols-3 bg-gray-100 border-b border-gray-300 font-bold p-3">
+                                                    <div>x</div>
+                                                    <div className="border-l border-r border-gray-300 grid grid-cols-3"><span>-∞</span><span className="text-primary-dark">{-ps/ms}</span><span>+∞</span></div>
+                                                    <div></div>
+                                                </div>
+                                                <div className="grid grid-cols-3 p-3 items-center">
+                                                    <div className="font-mono">f(x)</div>
+                                                    <div className="grid grid-cols-3 border-l border-r border-gray-300"><span className="text-xl font-bold">{ms > 0 ? '−' : '+'}</span><span className="font-bold border-l border-r border-gray-200">0</span><span className="text-xl font-bold">{ms > 0 ? '+' : '−'}</span></div>
+                                                    <div></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <FunctionGraph m={ms} p={ps} height={450} />
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const QuizSection = ({ mode, onTestComplete, onViewDiploma }) => {
+            const [started, setStarted] = useState(false);
+            const [name, setName] = useState('');
+            const [currentQuestion, setCurrentQuestion] = useState(null);
+            const [userAnswer, setUserAnswer] = useState('');
+            const [feedback, setFeedback] = useState(null);
+            const [score, setScore] = useState(0);
+            const [questionCount, setQuestionCount] = useState(0);
+            const [history, setHistory] = useState([]);
+            const [timeLeft, setTimeLeft] = useState(mode === 'TEST' ? 1200 : 0);
+            const [isFinished, setIsFinished] = useState(false);
+            const TOTAL_TEST_QUESTIONS = 20;
+
+            useEffect(() => {
+                let interval;
+                if (started && mode === 'TEST' && timeLeft > 0 && !isFinished) {
+                    interval = setInterval(() => {
+                        setTimeLeft(prev => { if (prev <= 1) { finishQuiz(); return 0; } return prev - 1; });
+                    }, 1000);
+                }
+                return () => clearInterval(interval);
+            }, [started, mode, timeLeft, isFinished]);
+
+            const startQuiz = () => {
+                if (mode === 'TEST' && !name.trim()) { alert("Entre ton nom !"); return; }
+                setStarted(true); setScore(0); setQuestionCount(0); setHistory([]); setFeedback(null); setIsFinished(false); setTimeLeft(1200);
+                nextQuestion();
+            };
+
+            const nextQuestion = () => {
+                setUserAnswer(''); setFeedback(null);
+                setCurrentQuestion(generateQuestion(mode === 'TRAINING' ? 'TRAINING' : 'TEST'));
+            };
+
+            const handleAnswerSubmit = (e) => {
+                e.preventDefault();
+                if (!currentQuestion || isFinished) return;
+                const isCorrect = checkAnswer(userAnswer, currentQuestion.correctAnswer, currentQuestion.answerType);
+
+                if (mode === 'TRAINING') {
+                    setFeedback({ isCorrect, msg: isCorrect ? "Bravo !" : `Faux. ${currentQuestion.explanation}` });
+                    if (isCorrect) setScore(s => s + 1);
+                } else {
+                    setFeedback({ isCorrect, msg: "Enregistré." });
+                    if (isCorrect) setScore(s => s + 1);
+                    setHistory(prev => [...prev, {
+                        questionText: currentQuestion.text,
+                        userAnswer: userAnswer,
+                        correctAnswer: String(currentQuestion.correctAnswer),
+                        isCorrect,
+                        explanation: currentQuestion.explanation,
+                        graphData: currentQuestion.graphData
+                    }]);
+                    setQuestionCount(prev => {
+                        const newCount = prev + 1;
+                        if (newCount >= TOTAL_TEST_QUESTIONS) setTimeout(finishQuiz, 1000);
+                        else setTimeout(nextQuestion, 1000);
+                        return newCount;
+                    });
+                }
+            };
+
+            const handleTrainingNext = () => {
+                if (currentQuestion) {
+                     setHistory(prev => [...prev, { questionText: currentQuestion.text, userAnswer: userAnswer, correctAnswer: String(currentQuestion.correctAnswer), isCorrect: feedback?.isCorrect || false, explanation: currentQuestion.explanation }]);
+                }
+                setQuestionCount(s => s + 1);
+                nextQuestion();
+            };
+
+            const finishQuiz = () => {
+                setIsFinished(true);
+                if (mode === 'TEST' && onTestComplete) onTestComplete(score, TOTAL_TEST_QUESTIONS, name);
+            };
+
+            const formatTime = (s) => `${Math.floor(s / 60)}:${s % 60 < 10 ? '0' : ''}${s % 60}`;
+            const getPlaceholder = (type) => { if (type === 'YES_NO') return "Oui ou Non"; if (type === 'EQUATION') return "Ex: y=2x+3"; if (type === 'FRACTION') return "Ex: 1/2"; return "Ta réponse"; };
+
+            if (!started) {
+                return (
+                    <div className="text-center space-y-6 max-w-md mx-auto py-10 animate-fade-in">
+                        <h3 className="text-2xl font-serif font-bold text-primary-dark">{mode === 'TRAINING' ? "Entraînement Libre" : "Test Final"}</h3>
+                        <p className="text-gray-600">{mode === 'TRAINING' ? "Pratique sans limite de temps. Reçois des explications immédiates." : "20 questions, 20 minutes. Obtiens 16/20 pour décrocher ton diplôme !"}</p>
+                        {mode === 'TEST' && <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ton Nom" className="w-full border-2 border-gray-300 rounded-lg p-3" />}
+                        <button onClick={startQuiz} className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3 px-6 rounded-full shadow-lg transform transition hover:-translate-y-1">{mode === 'TRAINING' ? "Commencer" : "Lancer"}</button>
+                    </div>
+                );
+            }
+
+            if (isFinished && mode === 'TEST') {
+                return (
+                    <div className="text-center py-8 space-y-6 animate-fade-in w-full">
+                        <h3 className="text-2xl font-bold text-primary-dark">Test Terminé !</h3>
+                        <div className="text-4xl font-black text-secondary-dark mb-4">{score} / {TOTAL_TEST_QUESTIONS}</div>
+                        {score >= 16 ? (
+                            <div className="space-y-4">
+                                <div className="p-4 bg-green-100 text-green-800 rounded-lg border border-green-200">Incroyable ! Tu as réussi !</div>
+                                <button onClick={onViewDiploma} className="bg-secondary hover:bg-secondary-dark text-white font-bold py-3 px-8 rounded-full shadow-lg transform transition hover:scale-105 animate-bounce-in flex items-center justify-center gap-2 mx-auto">
+                                    <Trophy size={20} /> Récupérer mon Diplôme
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="p-4 bg-yellow-50 text-yellow-800 rounded-lg border border-yellow-200">Bien joué ! Continue de t'entraîner pour atteindre 16/20.</div>
+                        )}
+                        <div className="text-left bg-white rounded-lg shadow border p-4 max-h-[500px] overflow-y-auto mt-6 custom-scroll">
+                            <h4 className="font-bold border-b pb-2 mb-4 text-gray-700 flex items-center gap-2"><HelpCircle size={18} /> Correction Détaillée</h4>
+                            <ul className="space-y-4">
+                                {history.map((h, i) => (
+                                    <li key={i} className={`p-4 rounded-lg border ${h.isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                                        <div className="font-bold text-gray-800 mb-2">Q{i+1} : {h.questionText}</div>
+                                        {h.graphData && <div className="mb-2 max-w-xs mx-auto"><FunctionGraph m={h.graphData.m} p={h.graphData.p} height={200} /></div>}
+                                        <div className="flex flex-col sm:flex-row gap-2 sm:gap-6 text-sm mb-2">
+                                            <span className={h.isCorrect ? 'text-green-700 font-bold' : 'text-red-700 font-bold'}>Ta réponse : {h.userAnswer || "(Vide)"}</span>
+                                            {!h.isCorrect && <span className="text-gray-600 font-bold">Réponse attendue : {h.correctAnswer}</span>}
+                                        </div>
+                                        {!h.isCorrect && <div className="text-sm text-gray-600 italic border-t pt-2 border-dashed border-gray-300">💡 {h.explanation}</div>}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                        <button onClick={() => setStarted(false)} className="flex items-center justify-center gap-2 mx-auto bg-gray-600 text-white px-6 py-2 rounded-full hover:bg-gray-700 mt-4"><RotateCcw size={18} /> Retour</button>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
+                    <div className="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+                        <div className="font-bold text-gray-700 flex items-center gap-2">
+                            {mode === 'TEST' ? <Timer className="text-primary" /> : <Award className="text-secondary" />}
+                            {mode === 'TEST' ? <span className={timeLeft < 60 ? "text-red-500 animate-pulse" : ""}>{formatTime(timeLeft)}</span> : `Série : ${score}`}
+                        </div>
+                        <div className="font-mono text-gray-500">Question {mode === 'TEST' ? `${questionCount + 1} / ${TOTAL_TEST_QUESTIONS}` : questionCount + 1}</div>
+                    </div>
+                    <div className="bg-white p-6 md:p-8 rounded-xl shadow-lg border-t-4 border-primary text-center space-y-6">
+                        <h4 className="text-xl font-medium text-gray-800 leading-relaxed">{currentQuestion?.text}</h4>
+                        {currentQuestion?.graphData && <div className="mx-auto max-w-sm mb-4"><FunctionGraph m={currentQuestion.graphData.m} p={currentQuestion.graphData.p} showPoints={true} height={300} /></div>}
+                        <form onSubmit={handleAnswerSubmit} className="flex flex-col items-center gap-4">
+                            <div className="relative w-full max-w-xs">
+                                <input type="text" value={userAnswer} onChange={(e) => setUserAnswer(e.target.value)} placeholder={getPlaceholder(currentQuestion?.answerType)} className="w-full text-center text-xl font-bold py-3 px-6 rounded-lg border-2 border-gray-200 focus:border-primary outline-none transition-all" autoFocus disabled={!!feedback && mode === 'TRAINING'} autoComplete="off" />
+                                {currentQuestion?.answerType === 'FRACTION' && <div className="absolute right-3 top-3 text-gray-400"><Calculator size={20} /></div>}
+                            </div>
+                            {(!feedback || mode === 'TEST') && <button type="submit" disabled={mode === 'TEST' && !userAnswer} className="bg-primary hover:bg-primary-dark disabled:bg-gray-300 text-white font-bold py-2 px-8 rounded-full shadow transition">Valider</button>}
+                        </form>
+                        {feedback && mode === 'TRAINING' && (
+                            <div className={`p-4 rounded-lg border flex flex-col items-center gap-2 animate-bounce-in ${feedback.isCorrect ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
+                                <div className="flex items-center gap-2 text-lg font-bold">{feedback.isCorrect ? <CheckCircle /> : <XCircle />} {feedback.msg}</div>
+                                <button onClick={handleTrainingNext} className="mt-2 bg-gray-800 text-white px-6 py-2 rounded-full text-sm hover:bg-black transition">Question Suivante →</button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const DiplomaSection = ({ name, score }) => {
+            const canvasRef = useRef(null);
+            useEffect(() => {
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+                const particles = [];
+                const colors = ['#007bff', '#ffc107', '#28a745', '#dc3545'];
+                for(let i=0; i<150; i++) particles.push({x: Math.random()*canvas.width, y: Math.random()*canvas.height-canvas.height, size: Math.random()*8+4, color: colors[Math.floor(Math.random()*colors.length)], speed: Math.random()*3+2, angle: Math.random()*6.28, spin: Math.random()*0.2-0.1});
+                const animate = () => {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    particles.forEach(p => {
+                        p.y += p.speed; p.angle += p.spin; p.x += Math.sin(p.angle)*0.5;
+                        if(p.y > canvas.height) { p.y = -10; p.x = Math.random()*canvas.width; }
+                        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.angle); ctx.fillStyle = p.color; ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size); ctx.restore();
+                    });
+                    requestAnimationFrame(animate);
+                };
+                const id = requestAnimationFrame(animate);
+                return () => cancelAnimationFrame(id);
+            }, []);
+
+            return (
+                <div className="relative min-h-[600px] flex items-center justify-center p-4">
+                    <canvas ref={canvasRef} className="fixed top-0 left-0 pointer-events-none z-0" />
+                    <div className="relative z-10 bg-white p-12 max-w-3xl w-full border-[20px] border-double border-primary/20 shadow-2xl rounded-lg text-center font-serif">
+                        <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-secondary text-white p-4 rounded-full shadow-lg border-4 border-white"><span className="text-5xl">🎓</span></div>
+                        <h1 className="text-4xl md:text-5xl font-bold text-primary-dark mt-8 mb-6 uppercase tracking-widest">Diplôme d'Expert</h1>
+                        <p className="text-xl text-gray-600 mb-2">Ce certificat est fièrement décerné à</p>
+                        <div className="text-4xl font-bold text-accent my-6 border-b-2 border-secondary inline-block pb-2 px-8">{name || "Apprenant Mystère"}</div>
+                        <p className="text-lg text-gray-600 mb-8 max-w-lg mx-auto leading-relaxed">Pour avoir démontré une maîtrise exceptionnelle des <strong>fonctions affines</strong>, des pentes et des systèmes d'équations.</p>
+                        <div className="flex justify-center items-center gap-4 mb-8">
+                            <div className="bg-gray-100 px-6 py-3 rounded-lg border border-gray-200"><span className="block text-xs text-gray-500 uppercase font-bold">Score Final</span><span className="text-2xl font-black text-primary">{score} / 20</span></div>
+                        </div>
+                        <div className="flex justify-between items-end mt-12 text-sm text-gray-500 font-sans border-t pt-4">
+                            <div className="text-left"><p>Date : {new Date().toLocaleDateString('fr-FR')}</p></div>
+                            <div className="text-right italic"><p>~ L'équipe De Zéro à Héros ~</p></div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [activeTab, setActiveTab] = useState('LEARNING');
+            const [diplomaData, setDiplomaData] = useState(null);
+
+            const handleTestComplete = (score, maxScore, name) => {
+                if (score >= 16) {
+                    setDiplomaData({ name, score });
+                    // Modification : Plus de navigation automatique !
+                }
+            };
+
+            const NavButton = ({ id, label, icon: Icon, active }) => (
+                <button onClick={() => setActiveTab(id)} className={`flex items-center gap-2 px-5 py-3 rounded-full font-bold transition-all transform hover:-translate-y-1 shadow-sm ${active ? 'bg-primary text-white shadow-md scale-105' : 'bg-white text-gray-600 hover:bg-blue-50'}`}>
+                    <Icon size={18} /> <span className="hidden sm:inline">{label}</span>
+                </button>
+            );
+
+            return (
+                <div className="min-h-screen bg-gray-50 pb-10">
+                    <div className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+                        <div className="max-w-5xl mx-auto px-4 py-3">
+                            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                                <h1 className="text-2xl font-serif font-bold text-primary flex items-center gap-2">🚀 Fonctions Affines</h1>
+                                <nav className="flex gap-2 sm:gap-4 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 justify-center">
+                                    <NavButton id="LEARNING" label="Apprendre" icon={BookOpen} active={activeTab === 'LEARNING'} />
+                                    <NavButton id="TRAINING" label="Exercices" icon={PenTool} active={activeTab === 'TRAINING'} />
+                                    <NavButton id="TEST" label="Test Final" icon={Award} active={activeTab === 'TEST'} />
+                                    {diplomaData && <NavButton id="DIPLOMA" label="Diplôme" icon={Trophy} active={activeTab === 'DIPLOMA'} />}
+                                </nav>
+                            </div>
+                        </div>
+                    </div>
+                    <main className="max-w-4xl mx-auto px-4 mt-8">
+                        <div className="bg-white/50 rounded-2xl p-2 sm:p-6 min-h-[500px]">
+                            {activeTab === 'LEARNING' && <LearningSection />}
+                            {activeTab === 'TRAINING' && <QuizSection mode="TRAINING" />}
+                            {activeTab === 'TEST' && <QuizSection mode="TEST" onTestComplete={handleTestComplete} onViewDiploma={() => setActiveTab('DIPLOMA')} />}
+                            {activeTab === 'DIPLOMA' && diplomaData && <DiplomaSection name={diplomaData.name} score={diplomaData.score} />}
+                        </div>
+                    </main>
+                    <footer className="text-center text-gray-400 text-sm mt-12 pb-4">© 2025 ES - De Zéro à Héros</footer>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
