@@ -1,715 +1,2060 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fonctions Affines : De Zéro à Héros</title>
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Roboto+Slab:wght@400;700&display=swap" rel="stylesheet">
-    
-    <!-- Babel pour JSX -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Fonctions affines : De zéro à héros — version 2</title>
 
-    <!-- Config Tailwind -->
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: ['Poppins', 'sans-serif'],
-              serif: ['Roboto Slab', 'serif'],
-            },
-            colors: {
-              primary: '#007bff',
-              'primary-dark': '#0056b3',
-              secondary: '#ffc107',
-              'secondary-dark': '#d39e00',
-              accent: '#28a745',
-              error: '#dc3545',
-              bgLight: '#f8f9fa',
-            }
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Roboto+Slab:wght@400;700&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Poppins', 'sans-serif'],
+            serif: ['Roboto Slab', 'serif'],
+          },
+          colors: {
+            primary: '#2563eb',
+            'primary-dark': '#1d4ed8',
+            secondary: '#f59e0b',
+            accent: '#16a34a',
+            danger: '#dc2626',
+            ink: '#0f172a',
+            soft: '#f8fafc',
           }
         }
       }
-    </script>
-    
-    <style>
-        body { font-family: 'Poppins', sans-serif; background-color: #f8f9fa; }
-        .custom-scroll::-webkit-scrollbar { width: 8px; }
-        .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
-        @keyframes bounceIn { 0% { opacity: 0; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1); } }
-        .animate-bounce-in { animation: bounceIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-    </style>
+    }
+  </script>
 
-    <!-- Import Map : Version STRICTE React 18.2.0 pour éviter les conflits -->
-    <script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@18.2.0",
-    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-    "react-dom": "https://esm.sh/react-dom@18.2.0",
-    "recharts": "https://esm.sh/recharts@2.12.7?external=react,react-dom",
-    "lucide-react": "https://esm.sh/lucide-react@0.330.0?external=react",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/"
+  <style>
+    body { font-family: 'Poppins', sans-serif; background: #f8fafc; }
+    .custom-scroll::-webkit-scrollbar { width: 8px; }
+    .custom-scroll::-webkit-scrollbar-track { background: #e5e7eb; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in { animation: fadeIn .35s ease-out forwards; }
+  </style>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.2.0",
+      "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+      "lucide-react": "https://esm.sh/lucide-react@0.330.0?external=react"
+    }
   }
-}
-</script>
+  </script>
 </head>
 <body>
-    <div id="root"></div>
+  <div id="root"></div>
 
-    <script type="text/babel" data-type="module">
-        import React, { useState, useEffect, useMemo, useRef } from 'react';
-        import ReactDOM from 'react-dom/client';
-        import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, ReferenceLine, Tooltip } from 'recharts';
-        import { 
-            BookOpen, PenTool, Award, Trophy, 
-            CheckCircle, XCircle, Timer, RotateCcw, 
-            Calculator, HelpCircle, TrendingUp, 
-            MoveVertical, GitCommit, MinusCircle 
-        } from 'lucide-react';
+  <script type="text/babel" data-type="module">
+    import React, { useEffect, useMemo, useState } from 'react';
+    import { createRoot } from 'react-dom/client';
+    import {
+      BookOpen, PenTool, ListChecks, Trophy, Timer,
+      CheckCircle, XCircle, RotateCcw, PlayCircle,
+      BrainCircuit, GraduationCap, Lightbulb, Eye, EyeOff
+    } from 'lucide-react';
 
-        // --- 1. UTILS (MATHS) ---
+    // =========================
+    // OUTILS
+    // =========================
 
-        const formatAffine = (m, p, includeY = false) => {
-            let mStr = "";
-            if (m === 0) mStr = "";
-            else if (m === 1) mStr = "x";
-            else if (m === -1) mStr = "-x";
-            else mStr = `${m}x`;
+    const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+    const choice = (arr) => arr[randInt(0, arr.length - 1)];
+    const shuffle = (arr) => {
+      const copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    };
+    const uid = () => (crypto?.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2));
+    const gcd = (a, b) => b === 0 ? Math.abs(a) : gcd(b, a % b);
 
-            let pStr = "";
-            if (m === 0) pStr = `${p}`;
-            else {
-                if (p > 0) pStr = ` + ${p}`;
-                else if (p < 0) pStr = ` - ${Math.abs(p)}`;
-            }
+    const normalize = (s) =>
+      String(s ?? '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
 
-            const expr = (mStr + pStr).trim() || "0";
-            return includeY ? `y = ${expr}` : expr;
+    const simplifyFraction = (num, den = 1) => {
+      if (den === 0) return { num: 0, den: 1 };
+      if (num === 0) return { num: 0, den: 1 };
+      if (den < 0) { num = -num; den = -den; }
+      const g = gcd(Math.abs(num), Math.abs(den));
+      return { num: num / g, den: den / g };
+    };
+
+    const fracValue = (f) => f.num / f.den;
+
+    const fracToString = (f) => {
+      const s = simplifyFraction(f.num, f.den);
+      return s.den === 1 ? `${s.num}` : `${s.num}/${s.den}`;
+    };
+
+    const parseNumberOrFraction = (input) => {
+      if (input === null || input === undefined) return NaN;
+      const clean = String(input)
+        .replace(/−/g, '-')
+        .replace(/,/g, '.')
+        .replace(/\s+/g, '');
+
+      if (!clean) return NaN;
+
+      if (clean.includes('/')) {
+        const [a, b] = clean.split('/');
+        const num = parseFloat(a);
+        const den = parseFloat(b);
+        if (!isFinite(num) || !isFinite(den) || den === 0) return NaN;
+        return num / den;
+      }
+      return parseFloat(clean);
+    };
+
+    const formatEquation = (mFrac, p) => {
+      const m = simplifyFraction(mFrac.num, mFrac.den);
+
+      if (m.num === 0) return `y = ${p}`;
+
+      let xPart = '';
+      if (m.num === m.den) xPart = 'x';
+      else if (m.num === -m.den) xPart = '-x';
+      else xPart = `${fracToString(m)}x`;
+
+      if (p === 0) return `y = ${xPart}`;
+      if (p > 0) return `y = ${xPart} + ${p}`;
+      return `y = ${xPart} - ${Math.abs(p)}`;
+    };
+
+    const parseEquation = (input) => {
+      let s = String(input ?? '')
+        .toLowerCase()
+        .replace(/−/g, '-')
+        .replace(/,/g, '.')
+        .replace(/\s+/g, '');
+
+      s = s.replace(/^f\(x\)=/, '').replace(/^y=/, '');
+
+      if (!s) return null;
+
+      if (!s.includes('x')) {
+        const p = parseNumberOrFraction(s);
+        return isNaN(p) ? null : { m: 0, p };
+      }
+
+      const i = s.indexOf('x');
+      let mPart = s.slice(0, i);
+      let pPart = s.slice(i + 1);
+
+      let m = 0;
+      if (mPart === '' || mPart === '+') m = 1;
+      else if (mPart === '-') m = -1;
+      else m = parseNumberOrFraction(mPart);
+
+      let p = 0;
+      if (pPart) p = parseNumberOrFraction(pPart);
+
+      if (!isFinite(m) || !isFinite(p)) return null;
+      return { m, p };
+    };
+
+    const equationsEqual = (u, c) => {
+      const a = parseEquation(u);
+      const b = parseEquation(c);
+      if (!a || !b) return false;
+      return Math.abs(a.m - b.m) < 1e-6 && Math.abs(a.p - b.p) < 1e-6;
+    };
+
+    const formatTime = (s) => {
+      const mm = String(Math.floor(s / 60)).padStart(2, '0');
+      const ss = String(s % 60).padStart(2, '0');
+      return `${mm}:${ss}`;
+    };
+
+    const uniqueOptions = (correct, extras) => {
+      const out = [correct];
+      extras.forEach(x => {
+        if (x !== undefined && x !== null && x !== '' && !out.includes(x)) out.push(x);
+      });
+      while (out.length < 4) {
+        const filler = `${randInt(-5, 5)}`;
+        if (!out.includes(filler)) out.push(filler);
+      }
+      return shuffle(out.slice(0, 4));
+    };
+
+    const randomSlope = ({ allowZero = false, preferFraction = true } = {}) => {
+      if (allowZero && Math.random() < 0.12) return { num: 0, den: 1 };
+      const den = preferFraction ? choice([2, 2, 3, 3, 4, 5, 1]) : choice([1, 1, 1, 2, 2, 3]);
+      let num = 0;
+      while (num === 0) num = randInt(-5, 5);
+      return simplifyFraction(num, den);
+    };
+
+    const makeGraphScenario = ({ preferFraction = true, allowZero = true } = {}) => {
+      for (let t = 0; t < 300; t++) {
+        const mFrac = randomSlope({ allowZero, preferFraction });
+        const p = randInt(-5, 5);
+
+        if (mFrac.num === 0) {
+          if (Math.abs(p) > 8) continue;
+          return {
+            mFrac,
+            p,
+            points: [{ x: -4, y: p }, { x: 4, y: p }]
+          };
+        }
+
+        const den = mFrac.den;
+        const num = mFrac.num;
+        const candidates = [];
+
+        for (let x0 = -9; x0 <= 9 - den; x0++) {
+          if (x0 % den !== 0) continue;
+          const y0 = fracValue(mFrac) * x0 + p;
+          const x1 = x0 + den;
+          const y1 = y0 + num;
+
+          if (
+            Number.isInteger(y0) &&
+            Number.isInteger(y1) &&
+            Math.abs(y0) <= 9 &&
+            Math.abs(y1) <= 9 &&
+            Math.abs(x1) <= 9
+          ) {
+            candidates.push({ x0, y0, x1, y1 });
+          }
+        }
+
+        if (candidates.length > 0) {
+          const c = choice(candidates);
+          return {
+            mFrac,
+            p,
+            points: [{ x: c.x0, y: c.y0 }, { x: c.x1, y: c.y1 }]
+          };
+        }
+      }
+
+      return {
+        mFrac: { num: 2, den: 3 },
+        p: -1,
+        points: [{ x: 0, y: -1 }, { x: 3, y: 1 }]
+      };
+    };
+
+    const makeTwoPointScenario = ({ preferFraction = true, allowZero = true } = {}) => {
+      for (let t = 0; t < 300; t++) {
+        const mFrac = randomSlope({ allowZero, preferFraction });
+        const p = randInt(-5, 5);
+        const k = choice([1, 1, 2]);
+        const dx = mFrac.den * k;
+        const dy = mFrac.num * k;
+        const x1 = mFrac.den * randInt(-4, 4);
+        const y1 = fracValue(mFrac) * x1 + p;
+        const x2 = x1 + dx;
+        const y2 = y1 + dy;
+
+        if (
+          [x1, y1, x2, y2].every(v => Number.isInteger(v)) &&
+          [x1, y1, x2, y2].every(v => Math.abs(v) <= 9) &&
+          x1 !== x2
+        ) {
+          return {
+            mFrac,
+            p,
+            A: { x: x1, y: y1 },
+            B: { x: x2, y: y2 }
+          };
+        }
+      }
+
+      return {
+        mFrac: { num: -3, den: 2 },
+        p: 4,
+        A: { x: -2, y: 7 },
+        B: { x: 0, y: 4 }
+      };
+    };
+
+    const makeParallelScenario = () => {
+      for (let t = 0; t < 300; t++) {
+        const mFrac = randomSlope({ allowZero: true, preferFraction: true });
+        const den = mFrac.den;
+        const x = den * randInt(-4, 4);
+        const y = randInt(-8, 8);
+        const pNew = y - fracValue(mFrac) * x;
+
+        if (!Number.isInteger(pNew) || Math.abs(pNew) > 8) continue;
+
+        let pOld = randInt(-8, 8);
+        if (pOld === pNew) pOld += 1;
+        if (Math.abs(pOld) > 8) continue;
+
+        return {
+          mFrac,
+          oldEq: formatEquation(mFrac, pOld),
+          point: { x, y },
+          pNew
         };
+      }
 
-        const parseFraction = (input) => {
-            if (!input) return NaN;
-            const clean = input.toString().replace(/\s/g, '').replace(',', '.');
-            if (clean.includes('/')) {
-                const [num, den] = clean.split('/');
-                const d = parseFloat(den);
-                return d === 0 ? NaN : parseFloat(num) / d;
-            }
-            return parseFloat(clean);
+      return {
+        mFrac: { num: 2, den: 3 },
+        oldEq: 'y = 2/3x - 4',
+        point: { x: 3, y: 5 },
+        pNew: 3
+      };
+    };
+
+    const slopeOptions = (mFrac) => {
+      const correct = fracToString(mFrac);
+      const wrongs = [];
+      if (mFrac.num !== 0) wrongs.push(fracToString(simplifyFraction(mFrac.den, mFrac.num)));
+      wrongs.push(fracToString({ num: -mFrac.num, den: mFrac.den }));
+      if (mFrac.num !== 0) wrongs.push(fracToString(simplifyFraction(-mFrac.den, mFrac.num)));
+      wrongs.push('0');
+      return uniqueOptions(correct, wrongs);
+    };
+
+    const equationOptions = (mFrac, p) => {
+      const correct = formatEquation(mFrac, p);
+      const wrongs = [
+        formatEquation({ num: -mFrac.num, den: mFrac.den }, p),
+        formatEquation(mFrac, 0),
+        formatEquation(mFrac, -p),
+        formatEquation(mFrac, p + (p === 0 ? 2 : 1)),
+      ];
+      if (mFrac.num !== 0) wrongs.push(formatEquation(simplifyFraction(mFrac.den, mFrac.num), p));
+      return uniqueOptions(correct, wrongs);
+    };
+
+    const checkAnswer = (question, userAnswer) => {
+      if (question.kind === 'MCQ') return userAnswer === question.correctAnswer;
+
+      if (question.answerType === 'FRACTION' || question.answerType === 'NUMBER') {
+        const u = parseNumberOrFraction(userAnswer);
+        const c = parseNumberOrFraction(question.correctAnswer);
+        return isFinite(u) && isFinite(c) && Math.abs(u - c) < 1e-6;
+      }
+
+      if (question.answerType === 'EQUATION') {
+        return equationsEqual(userAnswer, question.correctAnswer);
+      }
+
+      if (question.answerType === 'TEXT_SET') {
+        const u = normalize(userAnswer);
+        return (question.acceptedAnswers || []).some(a => normalize(a) === u);
+      }
+
+      return normalize(userAnswer) === normalize(question.correctAnswer);
+    };
+
+    // =========================
+    // GÉNÉRATEURS DE QUESTIONS
+    // =========================
+
+    function genSlopeGraphMCQ() {
+      const s = makeGraphScenario({ preferFraction: true, allowZero: true });
+      const dx = s.points[1].x - s.points[0].x;
+      const dy = s.points[1].y - s.points[0].y;
+
+      return {
+        id: uid(),
+        kind: 'MCQ',
+        category: 'Pente depuis un graphique',
+        prompt: "À partir du graphique, quelle est la pente m de la droite ?",
+        graph: s,
+        options: slopeOptions(s.mFrac),
+        correctAnswer: fracToString(s.mFrac),
+        explanation: `On lit Δy = ${dy} et Δx = ${dx}, donc m = ${dy}/${dx} = ${fracToString(s.mFrac)}.`
+      };
+    }
+
+    function genSlopeTwoPointsMCQ() {
+      const s = makeTwoPointScenario({ preferFraction: true, allowZero: true });
+      const dx = s.B.x - s.A.x;
+      const dy = s.B.y - s.A.y;
+
+      return {
+        id: uid(),
+        kind: 'MCQ',
+        category: 'Pente depuis deux points',
+        prompt: `La droite passe par A(${s.A.x}; ${s.A.y}) et B(${s.B.x}; ${s.B.y}). Quelle est sa pente ?`,
+        options: slopeOptions(s.mFrac),
+        correctAnswer: fracToString(s.mFrac),
+        explanation: `m = (${s.B.y} - ${s.A.y}) / (${s.B.x} - ${s.A.x}) = ${dy}/${dx} = ${fracToString(s.mFrac)}.`
+      };
+    }
+
+    function genEquationGraphMCQ() {
+      const s = makeGraphScenario({ preferFraction: true, allowZero: true });
+
+      return {
+        id: uid(),
+        kind: 'MCQ',
+        category: 'Équation depuis un graphique',
+        prompt: "Quelle est l'équation complète de la droite représentée ?",
+        graph: s,
+        options: equationOptions(s.mFrac, s.p),
+        correctAnswer: formatEquation(s.mFrac, s.p),
+        explanation: `La pente vaut ${fracToString(s.mFrac)} et l'ordonnée à l'origine vaut ${s.p}, donc l'équation est ${formatEquation(s.mFrac, s.p)}.`
+      };
+    }
+
+    function genEquationTwoPointsMCQ() {
+      const s = makeTwoPointScenario({ preferFraction: true, allowZero: true });
+
+      return {
+        id: uid(),
+        kind: 'MCQ',
+        category: 'Équation depuis deux points',
+        prompt: `Détermine l'équation de la droite passant par A(${s.A.x}; ${s.A.y}) et B(${s.B.x}; ${s.B.y}).`,
+        options: equationOptions(s.mFrac, s.p),
+        correctAnswer: formatEquation(s.mFrac, s.p),
+        explanation: `La pente vaut ${fracToString(s.mFrac)} puis, avec un des points, on trouve p = ${s.p}. L'équation est ${formatEquation(s.mFrac, s.p)}.`
+      };
+    }
+
+    function genEquationParallelMCQ() {
+      const s = makeParallelScenario();
+      const correct = formatEquation(s.mFrac, s.pNew);
+
+      return {
+        id: uid(),
+        kind: 'MCQ',
+        category: 'Parallèle et point',
+        prompt: `Quelle est l'équation de la droite passant par P(${s.point.x}; ${s.point.y}) et parallèle à ${s.oldEq} ?`,
+        options: equationOptions(s.mFrac, s.pNew),
+        correctAnswer: correct,
+        explanation: `Deux droites parallèles ont la même pente ${fracToString(s.mFrac)}. En utilisant le point P, on obtient p = ${s.pNew}, donc ${correct}.`
+      };
+    }
+
+    function genNatureMCQ() {
+      const mode = choice(['linear', 'constant', 'relation']);
+
+      if (mode === 'linear') {
+        const a = randomSlope({ allowZero: false, preferFraction: true });
+        const b = randInt(1, 5);
+        const c = randInt(-5, -1);
+        const d = randInt(1, 4);
+
+        return {
+          id: uid(),
+          kind: 'MCQ',
+          category: 'Affine, linéaire, constante',
+          prompt: "Quelle fonction est linéaire ?",
+          options: shuffle([
+            `y = ${fracToString(a)}x`,
+            `y = ${fracToString(a)}x + ${b}`,
+            `y = ${c}`,
+            `y = ${d} - x`
+          ]),
+          correctAnswer: `y = ${fracToString(a)}x`,
+          explanation: "Une fonction linéaire est de la forme y = mx, donc son ordonnée à l'origine vaut 0."
         };
+      }
 
-        const parseLinearEquation = (input) => {
-            let clean = input.toLowerCase().replace(/\s/g, '').replace(',', '.');
-            if (clean.startsWith('y=')) clean = clean.substring(2);
-            if (clean.startsWith('f(x)=')) clean = clean.substring(5);
-
-            if (!clean.includes('x')) {
-                const p = parseFloat(clean);
-                return isNaN(p) ? null : { m: 0, p };
-            }
-
-            const xIndex = clean.indexOf('x');
-            let mPart = clean.substring(0, xIndex);
-            let pPart = clean.substring(xIndex + 1);
-
-            let m = 0;
-            if (mPart === '' || mPart === '+') m = 1;
-            else if (mPart === '-') m = -1;
-            else m = parseFraction(mPart);
-
-            let p = 0;
-            if (pPart === '') p = 0;
-            else p = parseFraction(pPart);
-
-            if (isNaN(m) || isNaN(p)) return null;
-            return { m, p };
+      if (mode === 'constant') {
+        const c = randInt(-6, 6) || 2;
+        return {
+          id: uid(),
+          kind: 'MCQ',
+          category: 'Affine, linéaire, constante',
+          prompt: "Laquelle de ces fonctions est constante ?",
+          options: shuffle([
+            `y = ${c}`,
+            `y = ${c}x`,
+            `y = x + ${c}`,
+            `y = -x + ${Math.abs(c) + 1}`
+          ]),
+          correctAnswer: `y = ${c}`,
+          explanation: "Une fonction constante est de la forme y = p. Sa pente vaut 0."
         };
+      }
 
-        const checkAnswer = (userRaw, correct, type) => {
-            if (!userRaw) return false;
-            const cleanUser = userRaw.trim();
+      return {
+        id: uid(),
+        kind: 'MCQ',
+        category: 'Affine, linéaire, constante',
+        prompt: "Une fonction linéaire est toujours…",
+        options: shuffle([
+          "une fonction affine",
+          "une fonction constante non nulle",
+          "une fonction décroissante",
+          "une fonction sans pente"
+        ]),
+        correctAnswer: "une fonction affine",
+        explanation: "Une fonction linéaire est un cas particulier de fonction affine avec p = 0."
+      };
+    }
 
-            if (type === 'YES_NO') {
-                const normalized = cleanUser.toLowerCase();
-                const isYes = ['oui', 'yes', 'vrai'].includes(normalized);
-                const isNo = ['non', 'no', 'faux'].includes(normalized);
-                const correctBool = correct === 'OUI';
-                return (correctBool && isYes) || (!correctBool && isNo);
-            }
+    function genVariationMCQ() {
+      const mode = choice(['sign+', 'sign-', 'const', 'reverse']);
 
-            if (type === 'TEXT') return cleanUser.toLowerCase() === String(correct).toLowerCase();
-
-            if (type === 'EQUATION') {
-                const target = parseLinearEquation(String(correct));
-                const attempt = parseLinearEquation(cleanUser);
-                if (!target || !attempt) return false;
-                return Math.abs(target.m - attempt.m) < 0.01 && Math.abs(target.p - attempt.p) < 0.01;
-            }
-
-            const valUser = parseFraction(cleanUser);
-            const valCorrect = typeof correct === 'number' ? correct : parseFraction(String(correct));
-            if (isNaN(valUser)) return false;
-            return Math.abs(valUser - valCorrect) < 0.01;
+      if (mode === 'sign+') {
+        return {
+          id: uid(),
+          kind: 'MCQ',
+          category: 'Croissance et signe de la pente',
+          prompt: "Si m > 0, la fonction affine est…",
+          options: shuffle(["croissante", "décroissante", "constante", "impossible à savoir"]),
+          correctAnswer: "croissante",
+          explanation: "Une pente positive signifie que la droite monte quand x augmente."
         };
+      }
 
-        const generateUUID = () => {
-            if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-                return crypto.randomUUID();
-            }
-            return Math.random().toString(36).substring(2) + Date.now().toString(36);
+      if (mode === 'sign-') {
+        return {
+          id: uid(),
+          kind: 'MCQ',
+          category: 'Croissance et signe de la pente',
+          prompt: "Si une fonction affine est décroissante, alors…",
+          options: shuffle(["m < 0", "m > 0", "m = 0", "p < 0"]),
+          correctAnswer: "m < 0",
+          explanation: "Une fonction affine décroissante a une pente négative."
         };
+      }
 
-        // --- 2. GENERATEUR DE QUESTIONS ---
-
-        const getRandomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-        const getRandomNonZero = (min, max) => {
-            let val = 0;
-            while (val === 0) val = getRandomInt(min, max);
-            return val;
+      if (mode === 'const') {
+        return {
+          id: uid(),
+          kind: 'MCQ',
+          category: 'Croissance et signe de la pente',
+          prompt: "Quelle pente correspond à une fonction constante ?",
+          options: shuffle(["m = 0", "m = 1", "m > 0", "m < 0"]),
+          correctAnswer: "m = 0",
+          explanation: "Une fonction constante ne monte ni ne descend : sa pente est nulle."
         };
+      }
 
-        const generateQuestion = (mode) => {
-            const typeRoll = Math.random();
-            
-            // 1. DETERMINER L'EQUATION GRAPHIQUE (15%)
-            if (typeRoll < 0.15) {
-                const m = getRandomInt(-3, 3);
-                const p = getRandomInt(-4, 4);
-                const eq = formatAffine(m, p, true); 
-                return {
-                    id: generateUUID(),
-                    type: 'DETERMINE_FUNCTION_GRAPH',
-                    text: `Détermine l'expression analytique de la fonction représentée ci-dessous.`,
-                    correctAnswer: eq,
-                    answerType: 'EQUATION',
-                    graphData: { m, p },
-                    explanation: `On lit l'ordonnée à l'origine p=${p}. Pour la pente, on avance de 1 et on varie de ${m}. L'équation est ${eq}.`
-                };
-            }
+      const mFrac = choice([
+        { num: 2, den: 3 },
+        { num: -3, den: 4 },
+        { num: 0, den: 1 }
+      ]);
+      const p = randInt(-4, 4);
+      const eq = formatEquation(mFrac, p);
+      const expected = mFrac.num > 0 ? "croissante" : (mFrac.num < 0 ? "décroissante" : "constante");
 
-            // 2. EQUATION FROM TWO POINTS (20%)
-            if (typeRoll < 0.35) {
-                const m = getRandomInt(-4, 4);
-                const p = getRandomInt(-10, 10);
-                const x1 = getRandomInt(-5, 5);
-                let x2 = x1;
-                while(x2 === x1) x2 = getRandomInt(-5, 5);
-                const y1 = m * x1 + p;
-                const y2 = m * x2 + p;
-                const eq = formatAffine(m, p, true);
+      return {
+        id: uid(),
+        kind: 'MCQ',
+        category: 'Croissance et signe de la pente',
+        prompt: `La fonction ${eq} est…`,
+        options: shuffle(["croissante", "décroissante", "constante", "ni l'une ni l'autre"]),
+        correctAnswer: expected,
+        explanation: `On lit le signe de la pente : m = ${fracToString(mFrac)}.`
+      };
+    }
 
-                const isFunctionNotation = Math.random() > 0.5;
-                if (isFunctionNotation) {
-                    return {
-                        id: generateUUID(),
-                        type: 'FIND_FUNC_TWO_POINTS',
-                        text: `Détermine l'expression analytique de la fonction f telle que f(${x1}) = ${y1} et f(${x2}) = ${y2}.`,
-                        correctAnswer: eq,
-                        answerType: 'EQUATION',
-                        explanation: `Pente m = (${y2} - ${y1}) / (${x2} - (${x1})) = ${m}. Ensuite p = ${y1} - ${m}(${x1}) = ${p}. Réponse : ${eq}.`
-                    };
-                } else {
-                    return {
-                        id: generateUUID(),
-                        type: 'FIND_FUNC_TWO_POINTS',
-                        text: `Détermine l'expression analytique de la fonction g dont le graphique contient les points C(${x1}; ${y1}) et D(${x2}; ${y2}).`,
-                        correctAnswer: eq,
-                        answerType: 'EQUATION',
-                        explanation: `Pente m = (yD - yC) / (xD - xC) = ${m}. Ordonnée p = yC - m*xC = ${p}. Réponse : ${eq}.`
-                    };
-                }
-            }
+    function genSlopeGraphOpen() {
+      const s = makeGraphScenario({ preferFraction: true, allowZero: true });
+      const dx = s.points[1].x - s.points[0].x;
+      const dy = s.points[1].y - s.points[0].y;
 
-            // 3. PARALLEL + POINT (15%)
-            if (typeRoll < 0.50) {
-                const m = getRandomNonZero(-3, 3);
-                const pOld = getRandomInt(-5, 5);
-                const x = getRandomInt(-5, 5);
-                const y = getRandomInt(-5, 5);
-                const pNew = y - (m * x);
-                const eqOld = formatAffine(m, pOld, true);
-                const eqNew = formatAffine(m, pNew, true);
+      return {
+        id: uid(),
+        kind: 'OPEN',
+        category: 'Pente depuis un graphique',
+        prompt: "À partir du graphique, détermine la pente m de la droite.",
+        graph: s,
+        answerType: 'FRACTION',
+        correctAnswer: fracToString(s.mFrac),
+        explanation: `On lit Δy = ${dy} et Δx = ${dx}. Donc m = ${dy}/${dx} = ${fracToString(s.mFrac)}.`
+      };
+    }
 
-                return {
-                    id: generateUUID(),
-                    type: 'FIND_FUNC_PARALLEL_POINT',
-                    text: `Détermine l'expression analytique de la fonction h dont le graphique contient le point P(${x}; ${y}) et est parallèle à la droite d'équation ${eqOld}.`,
-                    correctAnswer: eqNew,
-                    answerType: 'EQUATION',
-                    explanation: `Parallèle signifie même pente m = ${m}. On cherche p tel que ${y} = ${m}(${x}) + p => p = ${pNew}. Réponse : ${eqNew}.`
-                };
-            }
+    function genSlopeTwoPointsOpen() {
+      const s = makeTwoPointScenario({ preferFraction: true, allowZero: true });
+      const dx = s.B.x - s.A.x;
+      const dy = s.B.y - s.A.y;
 
-            // 4. POINT MEMBERSHIP (10%)
-            if (typeRoll < 0.60) {
-                const m = getRandomInt(-3, 3);
-                const p = getRandomInt(-5, 5);
-                const x = getRandomInt(-5, 5);
-                const eq = formatAffine(m, p, true);
-                const isMember = Math.random() > 0.5;
-                const y = isMember ? (m * x + p) : (m * x + p + getRandomNonZero(-3, 3));
+      return {
+        id: uid(),
+        kind: 'OPEN',
+        category: 'Pente depuis deux points',
+        prompt: `La droite passe par A(${s.A.x}; ${s.A.y}) et B(${s.B.x}; ${s.B.y}). Détermine la pente m.`,
+        answerType: 'FRACTION',
+        correctAnswer: fracToString(s.mFrac),
+        explanation: `m = (${s.B.y} - ${s.A.y}) / (${s.B.x} - ${s.A.x}) = ${dy}/${dx} = ${fracToString(s.mFrac)}.`
+      };
+    }
 
-                return {
-                    id: generateUUID(),
-                    type: 'POINT_MEMBERSHIP',
-                    text: `Le point B(${x}; ${y}) appartient-il à la droite d'équation ${eq} ? (Réponds par Oui ou Non)`,
-                    correctAnswer: isMember ? 'OUI' : 'NON',
-                    answerType: 'YES_NO',
-                    explanation: `On remplace x par ${x} dans l'équation : ${m}(${x}) ${p>=0?'+':''}${p} = ${m*x+p}. Comme cela ${isMember ? 'est égal' : "n'est pas égal"} à y (${y}), la réponse est ${isMember ? 'Oui' : 'Non'}.`
-                };
-            }
+    function genEquationGraphOpen() {
+      const s = makeGraphScenario({ preferFraction: true, allowZero: true });
 
-            // 5. SIGN STUDY (10%)
-            if (typeRoll < 0.70) {
-                const m = getRandomNonZero(-4, 4);
-                const root = getRandomInt(-5, 5); 
-                const p = -root * m;
-                const func = formatAffine(m, p, true);
+      return {
+        id: uid(),
+        kind: 'OPEN',
+        category: 'Équation depuis un graphique',
+        prompt: "Détermine l'équation complète y = mx + p de la droite représentée.",
+        graph: s,
+        answerType: 'EQUATION',
+        correctAnswer: formatEquation(s.mFrac, s.p),
+        explanation: `La pente vaut ${fracToString(s.mFrac)} et l'ordonnée à l'origine vaut ${s.p}. Donc ${formatEquation(s.mFrac, s.p)}.`
+      };
+    }
 
-                return {
-                    id: generateUUID(),
-                    type: 'SIGN_STUDY',
-                    text: `Soit ${func}. Pour quelle valeur de x la fonction s'annule-t-elle (la racine) ?`,
-                    correctAnswer: root,
-                    answerType: 'NUMBER',
-                    explanation: `On cherche la racine : ${m}x ${p>=0?'+':''}${p} = 0 ⇔ x = ${root}.`
-                };
-            }
+    function genEquationTwoPointsOpen() {
+      const s = makeTwoPointScenario({ preferFraction: true, allowZero: true });
 
-            // 6. FIND IMAGE (10%)
-            if (typeRoll < 0.80) {
-                const m = getRandomInt(-5, 5);
-                const p = getRandomInt(-10, 10);
-                const x = getRandomInt(-5, 5);
-                const answer = m * x + p;
-                const func = formatAffine(m, p, false);
-                return {
-                    id: generateUUID(),
-                    type: 'FIND_IMAGE',
-                    text: `Soit f(x) = ${func}. Calcule f(${x}).`,
-                    correctAnswer: answer,
-                    answerType: 'NUMBER',
-                    explanation: `f(${x}) = ${m}(${x}) + ${p} = ${answer}.`
-                };
-            }
+      return {
+        id: uid(),
+        kind: 'OPEN',
+        category: 'Équation depuis deux points',
+        prompt: `Détermine l'équation complète de la droite passant par A(${s.A.x}; ${s.A.y}) et B(${s.B.x}; ${s.B.y}).`,
+        answerType: 'EQUATION',
+        correctAnswer: formatEquation(s.mFrac, s.p),
+        explanation: `La pente est ${fracToString(s.mFrac)} puis, avec un des points, on obtient p = ${s.p}. Donc ${formatEquation(s.mFrac, s.p)}.`
+      };
+    }
 
-            // 7. FIND PREIMAGE (10%)
-            if (typeRoll < 0.90) {
-                const x = getRandomInt(-5, 5);
-                const m = getRandomNonZero(-5, 5);
-                const p = getRandomInt(-10, 10);
-                const target = m * x + p;
-                const func = formatAffine(m, p, false);
-                return {
-                    id: generateUUID(),
-                    type: 'FIND_PREIMAGE',
-                    text: `Soit f(x) = ${func}. Détermine l'antécédent de ${target}.`,
-                    correctAnswer: x,
-                    answerType: 'FRACTION', 
-                    explanation: `${m}x + ${p} = ${target} ⇔ ${m}x = ${target - p} ⇔ x = ${x}.`
-                };
-            }
+    function genEquationParallelOpen() {
+      const s = makeParallelScenario();
+      const eq = formatEquation(s.mFrac, s.pNew);
 
-            // 8. FIND SLOPE (10%)
-            const m = getRandomInt(-5, 5);
-            const p = getRandomInt(-10, 10);
-            const x1 = getRandomInt(-5, 5);
-            let x2 = x1;
-            while (x2 === x1) x2 = getRandomInt(-5, 5);
-            const y1 = m * x1 + p;
-            const y2 = m * x2 + p;
+      return {
+        id: uid(),
+        kind: 'OPEN',
+        category: 'Parallèle et point',
+        prompt: `Détermine l'équation de la droite passant par P(${s.point.x}; ${s.point.y}) et parallèle à ${s.oldEq}.`,
+        answerType: 'EQUATION',
+        correctAnswer: eq,
+        explanation: `Deux droites parallèles ont la même pente ${fracToString(s.mFrac)}. Ensuite ${s.point.y} = ${fracToString(s.mFrac)}·${s.point.x} + p, donc p = ${s.pNew}.`
+      };
+    }
 
-            return {
-                id: generateUUID(),
-                type: 'FIND_M',
-                text: `Une droite passe par A(${x1}; ${y1}) et B(${x2}; ${y2}). Calcule sa pente m.`,
-                correctAnswer: m,
-                answerType: 'FRACTION',
-                explanation: `m = (yB - yA) / (xB - xA) = (${y2} - ${y1}) / (${x2} - ${x1}) = ${m}.`
-            };
+    function genNatureOpen() {
+      const type = choice(['affine', 'lineaire', 'constante']);
+
+      if (type === 'affine') {
+        const m = randomSlope({ allowZero: false, preferFraction: true });
+        let p = 0;
+        while (p === 0) p = randInt(-5, 5);
+
+        return {
+          id: uid(),
+          kind: 'OPEN',
+          category: 'Affine, linéaire, constante',
+          prompt: `Donne le type de la fonction ${formatEquation(m, p)} : affine, linéaire ou constante.`,
+          answerType: 'TEXT_SET',
+          acceptedAnswers: ['affine'],
+          correctAnswer: 'affine',
+          explanation: "Comme la fonction est de la forme y = mx + p avec p ≠ 0, elle est affine."
         };
+      }
 
-        // --- 3. COMPOSANTS ---
+      if (type === 'lineaire') {
+        const m = randomSlope({ allowZero: false, preferFraction: true });
 
-        const FunctionGraph = ({ m, p, showPoints = false, height = 400 }) => {
-            const data = useMemo(() => {
-                const points = [];
-                for (let x = -10; x <= 10; x++) { points.push({ x, y: m * x + p }); }
-                return points;
-            }, [m, p]);
-
-            return (
-                <div className="w-full bg-white rounded-lg border border-gray-200 shadow-inner p-2" style={{ height: `${height}px` }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={data} margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                            <XAxis dataKey="x" type="number" domain={[-10, 10]} tickCount={21} allowDataOverflow stroke="#6b7280" interval={0} tick={{fontSize: 10}} />
-                            <YAxis type="number" domain={[-10, 10]} tickCount={21} allowDataOverflow stroke="#6b7280" interval={0} tick={{fontSize: 10}} />
-                            <ReferenceLine x={0} stroke="#374151" strokeWidth={2} />
-                            <ReferenceLine y={0} stroke="#374151" strokeWidth={2} />
-                            <Line type="monotone" dataKey="y" stroke="#007bff" strokeWidth={3} dot={showPoints ? { r: 4, fill: '#ffc107', stroke: '#b45309' } : false} isAnimationActive={false} />
-                            <Tooltip contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #ddd' }} formatter={(value) => [value.toFixed(2), 'y']} labelFormatter={(label) => `x: ${label}`} />
-                        </LineChart>
-                    </ResponsiveContainer>
-                </div>
-            );
+        return {
+          id: uid(),
+          kind: 'OPEN',
+          category: 'Affine, linéaire, constante',
+          prompt: `Donne le type de la fonction ${formatEquation(m, 0)} : affine, linéaire ou constante.`,
+          answerType: 'TEXT_SET',
+          acceptedAnswers: ['lineaire', 'linéaire'],
+          correctAnswer: 'linéaire',
+          explanation: "Une fonction de la forme y = mx est linéaire."
         };
+      }
 
-        const LearningSection = () => {
-            const [tab, setTab] = useState('BASICS');
-            const [m, setM] = useState(1);
-            const [p, setP] = useState(0);
-            const [m2, setM2] = useState(1);
-            const [p2, setP2] = useState(-2);
-            const [ms, setMs] = useState(2);
-            const [ps, setPs] = useState(-4);
+      const c = randInt(-6, 6) || 3;
+      return {
+        id: uid(),
+        kind: 'OPEN',
+        category: 'Affine, linéaire, constante',
+        prompt: `Donne le type de la fonction y = ${c} : affine, linéaire ou constante.`,
+        answerType: 'TEXT_SET',
+        acceptedAnswers: ['constante'],
+        correctAnswer: 'constante',
+        explanation: "Une fonction de la forme y = p est constante, donc sa pente vaut 0."
+      };
+    }
 
-            const TabButton = ({ id, label }) => (
-                <button onClick={() => setTab(id)} className={`px-4 py-2 rounded-full font-bold text-sm sm:text-base transition-colors ${tab === id ? 'bg-primary text-white shadow' : 'bg-white text-gray-600 hover:bg-gray-100 border border-transparent hover:border-gray-200'}`}>{label}</button>
-            );
+    function genVariationOpen() {
+      const m = choice([
+        { num: 3, den: 4 },
+        { num: -2, den: 3 },
+        { num: 0, den: 1 }
+      ]);
+      const p = randInt(-5, 5);
+      const eq = formatEquation(m, p);
+      const expected = m.num > 0 ? 'croissante' : (m.num < 0 ? 'décroissante' : 'constante');
 
-            return (
-                <div className="space-y-6 animate-fade-in pb-8">
-                    <div className="flex flex-col items-center gap-4">
-                        <h2 className="text-3xl font-serif text-primary-dark font-bold text-center">Comprendre y = mx + p</h2>
-                        <div className="flex flex-wrap justify-center gap-2 bg-gray-100 p-1.5 rounded-full">
-                            <TabButton id="BASICS" label="Bases" />
-                            <TabButton id="POSITIONS" label="Comparaison" />
-                            <TabButton id="SIGNS" label="Signes" />
-                        </div>
-                    </div>
+      return {
+        id: uid(),
+        kind: 'OPEN',
+        category: 'Croissance et signe de la pente',
+        prompt: `La fonction ${eq} est-elle croissante, décroissante ou constante ?`,
+        answerType: 'TEXT_SET',
+        acceptedAnswers: [expected],
+        correctAnswer: expected,
+        explanation: `Le signe de la pente m = ${fracToString(m)} détermine la variation de la fonction.`
+      };
+    }
 
-                    {tab === 'BASICS' && (
-                        <div className="grid lg:grid-cols-2 gap-8 items-start animate-fade-in">
-                            <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 space-y-6">
-                                <div className="text-center bg-blue-50 p-4 rounded-lg"><span className="text-2xl font-mono text-primary-dark font-bold">{formatAffine(m, p, true)}</span></div>
-                                <div className="space-y-2">
-                                    <label className="flex items-center gap-2 font-bold text-gray-700"><TrendingUp size={20} className="text-accent" /> Pente (m) : {m}</label>
-                                    <input type="range" min="-5" max="5" step="0.5" value={m} onChange={(e) => setM(parseFloat(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-accent" />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="flex items-center gap-2 font-bold text-gray-700"><MoveVertical size={20} className="text-orange-600" /> Ordonnée (p) : {p}</label>
-                                    <input type="range" min="-5" max="5" step="1" value={p} onChange={(e) => setP(parseFloat(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-600" />
-                                </div>
-                                <div className="mt-6 p-4 rounded-lg bg-gray-50 border border-gray-200">
-                                    <h4 className="font-bold text-primary-dark mb-2 flex items-center gap-2"><BookOpen size={18}/> Formules</h4>
-                                    <ul className="text-sm space-y-3">
-                                        <li><strong className="text-accent">Pente (m) :</strong> Variation verticale divisée par variation horizontale.<div className="bg-white p-2 rounded border mt-1 font-mono text-center">m = Δy / Δx</div></li>
-                                        <li><strong className="text-orange-600">Ordonnée (p) :</strong> Image de 0 (intersection axe Y).</li>
-                                    </ul>
-                                </div>
-                            </div>
-                            <FunctionGraph m={m} p={p} showPoints={true} height={450} />
-                        </div>
+    const QCM_SEQUENCE = [
+      genSlopeGraphMCQ,
+      genSlopeTwoPointsMCQ,
+      genEquationGraphMCQ,
+      genEquationTwoPointsMCQ,
+      genEquationParallelMCQ,
+      genNatureMCQ,
+      genVariationMCQ
+    ];
+
+    const EXERCISE_SEQUENCE = [
+      genSlopeGraphOpen,
+      genSlopeTwoPointsOpen,
+      genEquationGraphOpen,
+      genEquationTwoPointsOpen,
+      genEquationParallelOpen,
+      genNatureOpen,
+      genVariationOpen
+    ];
+
+    const FINAL_SEQUENCE = [
+      genSlopeGraphOpen,
+      genSlopeTwoPointsOpen,
+      genEquationGraphOpen,
+      genEquationTwoPointsOpen,
+      genEquationParallelOpen,
+      genNatureOpen,
+      genVariationOpen,
+      genSlopeGraphMCQ,
+      genSlopeTwoPointsMCQ,
+      genEquationGraphMCQ,
+      genEquationTwoPointsMCQ,
+      genEquationParallelMCQ,
+      genNatureMCQ,
+      genVariationMCQ
+    ];
+
+    const makeExerciseQuestion = (index) => EXERCISE_SEQUENCE[index % EXERCISE_SEQUENCE.length]();
+    const makeQCMQuestion = (index) => QCM_SEQUENCE[index % QCM_SEQUENCE.length]();
+    const makeFinalQuestion = (index) => FINAL_SEQUENCE[index % FINAL_SEQUENCE.length]();
+
+    // =========================
+    // COMPOSANTS D'AFFICHAGE
+    // =========================
+
+    const TimerBadge = ({ seconds }) => (
+      <div className="inline-flex items-center gap-2 rounded-full bg-white border border-slate-200 px-4 py-2 shadow-sm text-slate-700 font-semibold">
+        <Timer size={18} className="text-primary" />
+        {formatTime(seconds)}
+      </div>
+    );
+
+    const GraphSVG = ({ scenario, height = 360, showGuide = false }) => {
+      const width = 480;
+      const xMin = -10, xMax = 10, yMin = -10, yMax = 10;
+      const m = fracValue(scenario.mFrac);
+      const p = scenario.p;
+
+      const toX = (x) => ((x - xMin) / (xMax - xMin)) * width;
+      const toY = (y) => height - ((y - yMin) / (yMax - yMin)) * height;
+
+      const linePoints = [
+        { x: xMin, y: m * xMin + p },
+        { x: xMax, y: m * xMax + p }
+      ];
+
+      const [A, B] = scenario.points;
+      const corner = { x: B.x, y: A.y };
+
+      const grid = [];
+      for (let x = xMin; x <= xMax; x++) grid.push({ type: 'v', x });
+      for (let y = yMin; y <= yMax; y++) grid.push({ type: 'h', y });
+
+      return (
+        <div className="bg-white border border-slate-200 rounded-2xl p-3 shadow-sm">
+          <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto">
+            {grid.map((g, i) =>
+              g.type === 'v' ? (
+                <line
+                  key={i}
+                  x1={toX(g.x)}
+                  y1={toY(yMin)}
+                  x2={toX(g.x)}
+                  y2={toY(yMax)}
+                  stroke={g.x === 0 ? '#0f172a' : '#e2e8f0'}
+                  strokeWidth={g.x === 0 ? 2 : 1}
+                />
+              ) : (
+                <line
+                  key={i}
+                  x1={toX(xMin)}
+                  y1={toY(g.y)}
+                  x2={toX(xMax)}
+                  y2={toY(g.y)}
+                  stroke={g.y === 0 ? '#0f172a' : '#e2e8f0'}
+                  strokeWidth={g.y === 0 ? 2 : 1}
+                />
+              )
+            )}
+
+            {Array.from({ length: 21 }, (_, k) => k - 10).map(v => (
+              <text key={`x${v}`} x={toX(v)} y={toY(0) + 14} textAnchor="middle" fontSize="9" fill="#64748b">
+                {v !== 0 ? v : ''}
+              </text>
+            ))}
+            {Array.from({ length: 21 }, (_, k) => k - 10).map(v => (
+              <text key={`y${v}`} x={toX(0) + 8} y={toY(v) + 3} fontSize="9" fill="#64748b">
+                {v !== 0 ? v : ''}
+              </text>
+            ))}
+
+            <line
+              x1={toX(linePoints[0].x)}
+              y1={toY(linePoints[0].y)}
+              x2={toX(linePoints[1].x)}
+              y2={toY(linePoints[1].y)}
+              stroke="#2563eb"
+              strokeWidth="3.5"
+              strokeLinecap="round"
+            />
+
+            {showGuide && (
+              <>
+                <line
+                  x1={toX(A.x)}
+                  y1={toY(A.y)}
+                  x2={toX(corner.x)}
+                  y2={toY(corner.y)}
+                  stroke="#f59e0b"
+                  strokeWidth="3"
+                  strokeDasharray="6 4"
+                />
+                <line
+                  x1={toX(corner.x)}
+                  y1={toY(corner.y)}
+                  x2={toX(B.x)}
+                  y2={toY(B.y)}
+                  stroke="#16a34a"
+                  strokeWidth="3"
+                  strokeDasharray="6 4"
+                />
+
+                <text x={(toX(A.x) + toX(corner.x)) / 2} y={toY(A.y) - 7} fontSize="11" fill="#b45309" textAnchor="middle">
+                  Δx = {B.x - A.x}
+                </text>
+                <text x={toX(B.x) + 9} y={(toY(corner.y) + toY(B.y)) / 2} fontSize="11" fill="#15803d">
+                  Δy = {B.y - A.y}
+                </text>
+
+                {[A, B].map((pt, idx) => (
+                  <g key={idx}>
+                    <circle cx={toX(pt.x)} cy={toY(pt.y)} r="6" fill="#facc15" stroke="#a16207" strokeWidth="2" />
+                    <text x={toX(pt.x) + 8} y={toY(pt.y) - 8} fontSize="11" fill="#0f172a">
+                      {idx === 0 ? 'A' : 'B'}
+                    </text>
+                  </g>
+                ))}
+              </>
+            )}
+          </svg>
+
+          <div className="mt-2 text-sm text-slate-600">
+            {showGuide
+              ? "Aide affichée : les points repères et les variations Δx et Δy sont visibles."
+              : "Aide masquée : le graphique est affiché sans repères de lecture de pente."}
+          </div>
+        </div>
+      );
+    };
+
+    const QuestionCard = ({ question }) => {
+      const [showHelp, setShowHelp] = useState(false);
+
+      useEffect(() => {
+        setShowHelp(false);
+      }, [question.id]);
+
+      return (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-4 animate-fade-in">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center rounded-full bg-blue-50 text-primary px-3 py-1 text-xs font-bold">
+              {question.category}
+            </span>
+            <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-600 px-3 py-1 text-xs font-semibold">
+              {question.kind === 'MCQ' ? 'QCM' : 'Réponse ouverte'}
+            </span>
+          </div>
+
+          <p className="text-lg font-semibold text-ink">{question.prompt}</p>
+
+          {question.graph && (
+            <div className="space-y-3">
+              <label className="inline-flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showHelp}
+                  onChange={(e) => setShowHelp(e.target.checked)}
+                  className="h-4 w-4 accent-primary"
+                />
+                <span className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                  {showHelp ? <Eye size={16} className="text-primary" /> : <EyeOff size={16} className="text-slate-500" />}
+                  Afficher l'aide graphique (points jaunes, Δx, Δy)
+                </span>
+              </label>
+
+              <GraphSVG scenario={question.graph} showGuide={showHelp} />
+
+              <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800 flex items-start gap-2">
+                <Lightbulb size={16} className="mt-0.5 shrink-0" />
+                <span>
+                  Essaie d'abord sans aide, puis coche la case si tu veux faire apparaître les repères de lecture.
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    const MCQOptions = ({ options, selected, setSelected, locked = false }) => (
+      <div className="grid gap-3">
+        {options.map((opt) => (
+          <button
+            key={opt}
+            disabled={locked}
+            onClick={() => setSelected(opt)}
+            className={`w-full text-left px-4 py-3 rounded-xl border transition font-medium
+              ${selected === opt ? 'border-primary bg-blue-50 text-primary' : 'border-slate-200 bg-white hover:bg-slate-50'}
+              ${locked ? 'cursor-default' : ''}`}
+          >
+            {opt}
+          </button>
+        ))}
+      </div>
+    );
+
+    const OpenInput = ({ question, answer, setAnswer, locked = false }) => (
+      <div className="space-y-3">
+        <input
+          type="text"
+          value={answer}
+          disabled={locked}
+          onChange={(e) => setAnswer(e.target.value)}
+          placeholder={
+            question.answerType === 'EQUATION'
+              ? "Exemple : y = 2/3x - 4"
+              : question.answerType === 'TEXT_SET'
+                ? "Exemple : affine"
+                : "Ta réponse"
+          }
+          className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:ring-2 focus:ring-blue-200 focus:border-primary"
+        />
+        {question.answerType === 'EQUATION' && (
+          <div className="text-xs text-slate-500">
+            Formats acceptés : y = 2/3x - 4, y=2/3x-4, f(x)=2/3x-4.
+          </div>
+        )}
+      </div>
+    );
+
+    const FeedbackBox = ({ ok, explanation, correctAnswer }) => (
+      <div className={`rounded-2xl p-4 border ${ok ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+        <div className={`flex items-center gap-2 font-bold ${ok ? 'text-green-700' : 'text-red-700'}`}>
+          {ok ? <CheckCircle size={20} /> : <XCircle size={20} />}
+          {ok ? 'Bonne réponse' : `Réponse attendue : ${correctAnswer}`}
+        </div>
+        <p className="mt-2 text-sm text-slate-700">{explanation}</p>
+      </div>
+    );
+
+    // =========================
+    // APPRENDRE
+    // =========================
+
+    const LearningSection = () => {
+      // =========================
+// WIDGET VARIATION & PENTE
+// =========================
+
+const VariationWidget = () => {
+  const [mVal, setMVal] = React.useState(1);
+  const [pVal, setPVal] = React.useState(0);
+  const canvasRef = React.useRef(null);
+
+  const RANGE = 10, PAD = 44;
+
+  const fmt = (n) => Number.isInteger(n) ? String(n) : n.toFixed(1);
+
+  const buildFormula = (m, p) => {
+    let s = 'f(x) = ';
+    if (m === 0) return s + fmt(p);
+    s += fmt(m) + 'x';
+    if (p > 0) s += ' + ' + fmt(p);
+    else if (p < 0) s += ' − ' + fmt(Math.abs(p));
+    return s;
+  };
+
+  const zero = mVal !== 0 ? -pVal / mVal : null;
+
+  const leftSign = mVal > 0 ? '−' : (mVal < 0 ? '+' : (pVal > 0 ? '+' : (pVal < 0 ? '−' : '0')));
+  const rightSign = mVal > 0 ? '+' : (mVal < 0 ? '−' : (pVal > 0 ? '+' : (pVal < 0 ? '−' : '0')));
+
+  const monotonyText = mVal > 0
+    ? '↗ Fonction croissante (m > 0)'
+    : mVal < 0
+      ? '↘ Fonction décroissante (m < 0)'
+      : '→ Fonction constante (m = 0)';
+
+  const monotonyColor = mVal > 0 ? '#15803d' : mVal < 0 ? '#b91c1c' : '#92400e';
+  const monotonyBg = mVal > 0 ? '#dcfce7' : mVal < 0 ? '#fee2e2' : '#fef9c3';
+  const monotonyBorder = mVal > 0 ? '#86efac' : mVal < 0 ? '#fca5a5' : '#fde68a';
+
+  const explainText = mVal === 0
+    ? `Comme m = 0, la droite est horizontale (fonction constante). f(x) = ${fmt(pVal)} pour tout x.`
+    : `Comme m = ${fmt(mVal)} ${mVal > 0 ? '> 0' : '< 0'}, la droite est ${mVal > 0 ? 'croissante' : 'décroissante'}. Le signe de f(x) s'annule en x = ${fmt(zero)} : ${mVal > 0 ? 'négatif à gauche, positif à droite' : 'positif à gauche, négatif à droite'}.`;
+
+  const toCanvas = (x, y, W, H) => {
+    const cx = PAD + (x + RANGE) / (2 * RANGE) * (W - 2 * PAD);
+    const cy = (H - PAD) - (y + RANGE) / (2 * RANGE) * (H - 2 * PAD);
+    return [cx, cy];
+  };
+
+  React.useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const W = canvas.width, H = canvas.height;
+    const ctx = canvas.getContext('2d');
+    const m = mVal, p = pVal;
+
+    ctx.clearRect(0, 0, W, H);
+
+    ctx.fillStyle = '#f8fafc';
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(0, 0, W, H, 12);
+    else ctx.rect(0, 0, W, H);
+    ctx.fill();
+
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    for (let i = -RANGE; i <= RANGE; i++) {
+      const [gx] = toCanvas(i, 0, W, H);
+      const [, gy] = toCanvas(0, i, W, H);
+      ctx.beginPath(); ctx.moveTo(gx, PAD); ctx.lineTo(gx, H - PAD); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(PAD, gy); ctx.lineTo(W - PAD, gy); ctx.stroke();
+    }
+
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = 2;
+    const [, ay] = toCanvas(0, 0, W, H);
+    const [ax] = toCanvas(0, 0, W, H);
+    ctx.beginPath(); ctx.moveTo(PAD, ay); ctx.lineTo(W - PAD, ay); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(ax, PAD); ctx.lineTo(ax, H - PAD); ctx.stroke();
+
+    ctx.fillStyle = '#1e293b';
+    ctx.beginPath(); ctx.moveTo(W - PAD + 8, ay); ctx.lineTo(W - PAD, ay - 5); ctx.lineTo(W - PAD, ay + 5); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(ax, PAD - 8); ctx.lineTo(ax - 5, PAD); ctx.lineTo(ax + 5, PAD); ctx.closePath(); ctx.fill();
+
+    ctx.fillStyle = '#64748b';
+    ctx.font = '11px Poppins, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    for (let i = -RANGE; i <= RANGE; i++) {
+      if (i === 0) continue;
+      const [gx] = toCanvas(i, 0, W, H);
+      ctx.fillText(i, gx, ay + 6);
+    }
+
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    for (let i = -RANGE; i <= RANGE; i++) {
+      if (i === 0) continue;
+      const [, gy] = toCanvas(0, i, W, H);
+      ctx.fillText(i, ax - 6, gy);
+    }
+
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'top';
+    ctx.fillText('0', ax - 4, ay + 4);
+
+    ctx.fillStyle = '#1e293b';
+    ctx.font = 'bold 13px Poppins, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('x', W - PAD + 12, ay);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('y', ax, PAD - 12);
+
+    ctx.strokeStyle = '#2563eb';
+    ctx.lineWidth = 3;
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    if (m === 0) {
+      const [sx, sy] = toCanvas(-RANGE, p, W, H);
+      const [ex, ey] = toCanvas(RANGE, p, W, H);
+      ctx.moveTo(sx, sy); ctx.lineTo(ex, ey);
+    } else {
+      const xAtYmax = (RANGE - p) / m;
+      const xAtYmin = (-RANGE - p) / m;
+      const xs = [-RANGE, RANGE, xAtYmax, xAtYmin].sort((a, b) => a - b);
+      const x1c = Math.max(-RANGE, xs[1]);
+      const x2c = Math.min(RANGE, xs[2]);
+      const [sx, sy] = toCanvas(x1c, m * x1c + p, W, H);
+      const [ex, ey] = toCanvas(x2c, m * x2c + p, W, H);
+      ctx.moveTo(sx, sy); ctx.lineTo(ex, ey);
+    }
+    ctx.stroke();
+
+    if (m !== 0) {
+      const z = -p / m;
+      if (z >= -RANGE && z <= RANGE) {
+        const [zx, zy] = toCanvas(z, 0, W, H);
+        ctx.beginPath();
+        ctx.arc(zx, zy, 6, 0, 2 * Math.PI);
+        ctx.fillStyle = '#2563eb';
+        ctx.fill();
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = '#1d4ed8';
+        ctx.font = 'bold 11px Poppins, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(fmt(z), zx, zy - 10);
+      }
+    }
+
+    ctx.fillStyle = '#2563eb';
+    ctx.font = 'bold 13px Poppins, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText(buildFormula(m, p), PAD + 4, PAD + 4);
+  }, [mVal, pVal]);
+
+  const sliderStyle = (val, min, max, color) => {
+    const pct = ((val - min) / (max - min)) * 100;
+    return {
+      background: `linear-gradient(to right, ${color} 0%, ${color} ${pct}%, #d1d5db ${pct}%, #d1d5db 100%)`
+    };
+  };
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+      <h3 className="font-bold text-lg text-primary-dark mb-4">🎛️ Explorateur interactif</h3>
+
+      <div style={{display:'flex', gap:'24px', flexWrap:'wrap'}}>
+        <div style={{flex:'1 1 280px', minWidth:'240px'}}>
+          <div style={{background:'#eff6ff', border:'2px solid #bfdbfe', borderRadius:'12px', padding:'12px 20px', textAlign:'center', marginBottom:'18px'}}>
+            <span style={{fontSize:'1.4rem', fontWeight:700, color:'#1d4ed8', letterSpacing:'1px'}}>
+              {buildFormula(mVal, pVal)}
+            </span>
+          </div>
+
+          <div style={{marginBottom:'14px'}}>
+            <div style={{display:'flex', justifyContent:'space-between', marginBottom:'6px', fontWeight:600}}>
+              <span>Pente <em>m</em></span>
+              <span style={{background:'#1d4ed8', color:'white', borderRadius:'6px', padding:'2px 10px', fontSize:'0.9rem'}}>{fmt(mVal)}</span>
+            </div>
+            <input
+              type="range"
+              min="-10"
+              max="10"
+              step="0.5"
+              value={mVal}
+              onChange={e => setMVal(parseFloat(e.target.value))}
+              style={{...sliderStyle(mVal, -10, 10, '#16a34a'), width:'100%', height:'8px', borderRadius:'4px', outline:'none', cursor:'pointer', WebkitAppearance:'none', appearance:'none'}}
+            />
+          </div>
+
+          <div style={{marginBottom:'18px'}}>
+            <div style={{display:'flex', justifyContent:'space-between', marginBottom:'6px', fontWeight:600}}>
+              <span>Ordonnée à l'origine <em>p</em></span>
+              <span style={{background:'#ea580c', color:'white', borderRadius:'6px', padding:'2px 10px', fontSize:'0.9rem'}}>{fmt(pVal)}</span>
+            </div>
+            <input
+              type="range"
+              min="-10"
+              max="10"
+              step="0.5"
+              value={pVal}
+              onChange={e => setPVal(parseFloat(e.target.value))}
+              style={{...sliderStyle(pVal, -10, 10, '#ea580c'), width:'100%', height:'8px', borderRadius:'4px', outline:'none', cursor:'pointer', WebkitAppearance:'none', appearance:'none'}}
+            />
+          </div>
+
+          <div>
+            <div style={{fontWeight:700, color:'#1e40af', marginBottom:'10px', fontSize:'0.95rem'}}>⊕ Tableau de Signes</div>
+            <div style={{overflowX:'auto'}}>
+              <table style={{borderCollapse:'collapse', width:'100%', minWidth:'300px', fontSize:'1rem'}}>
+                <thead>
+                  <tr style={{background:'#f1f5f9'}}>
+                    <th style={{border:'1.5px solid #cbd5e1', padding:'8px 14px', fontWeight:700, color:'#334155'}}>x</th>
+                    <th style={{border:'1.5px solid #cbd5e1', padding:'8px 14px', color:'#64748b', fontSize:'0.9rem'}}>−∞</th>
+                    {mVal !== 0 && (
+                      <th style={{border:'1.5px solid #cbd5e1', padding:'8px 14px', fontWeight:800, color:'#1d4ed8', fontSize:'1.05rem'}}>
+                        {fmt(zero)}
+                      </th>
                     )}
-
-                    {tab === 'POSITIONS' && (
-                        <div className="grid lg:grid-cols-2 gap-8 items-start animate-fade-in">
-                            <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 space-y-6">
-                                <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-primary"><GitCommit /> Comparaison</h3>
-                                <p className="text-sm text-gray-600 mb-4 bg-gray-100 p-2 rounded">Droite 1 (Fixe): <span className="font-mono font-bold">y = x + 1</span> (m=1)</p>
-                                <div className="text-center bg-gray-50 p-3 rounded font-mono font-bold text-accent">Droite 2 : {formatAffine(m2, p2, true)}</div>
-                                <input type="range" min="-4" max="4" step="0.5" value={m2} onChange={(e) => setM2(parseFloat(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg accent-accent" />
-                                <div className="mt-6 p-4 rounded-lg bg-blue-50 border border-blue-100">
-                                    <ul className="text-sm space-y-2">
-                                        <li className={m2 === 1 ? "text-green-600 font-bold" : "text-gray-500"}>⚡ Parallèles (m₁ = m₂) : {m2 === 1 ? "OUI" : "NON"}</li>
-                                        <li className={m2 === -1 ? "text-green-600 font-bold" : "text-gray-500"}>⚡ Perpendiculaires (m₁ × m₂ = -1) : {m2 === -1 ? "OUI" : "NON"}</li>
-                                    </ul>
-                                </div>
-                            </div>
-                            <FunctionGraph m={m2} p={p2} height={450} />
-                        </div>
+                    <th style={{border:'1.5px solid #cbd5e1', padding:'8px 14px', color:'#64748b', fontSize:'0.9rem'}}>+∞</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style={{border:'1.5px solid #cbd5e1', padding:'8px 14px', textAlign:'center'}}><strong>f(x)</strong></td>
+                    <td style={{border:'1.5px solid #cbd5e1', padding:'8px 14px', textAlign:'center', ...(leftSign === '+' ? {color:'#16a34a', fontWeight:700, fontSize:'1.1rem'} : leftSign === '−' ? {color:'#dc2626', fontWeight:700, fontSize:'1.1rem'} : {})}}>
+                      {leftSign}
+                    </td>
+                    {mVal !== 0 && (
+                      <td style={{border:'1.5px solid #cbd5e1', padding:'8px 14px', textAlign:'center', fontWeight:800, color:'#1d4ed8', fontSize:'1.05rem'}}>
+                        0
+                      </td>
                     )}
+                    <td style={{border:'1.5px solid #cbd5e1', padding:'8px 14px', textAlign:'center', ...(rightSign === '+' ? {color:'#16a34a', fontWeight:700, fontSize:'1.1rem'} : rightSign === '−' ? {color:'#dc2626', fontWeight:700, fontSize:'1.1rem'} : {})}}>
+                      {rightSign}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
 
-                    {tab === 'SIGNS' && (
-                        <div className="grid lg:grid-cols-2 gap-8 items-start animate-fade-in">
-                            <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 space-y-6">
-                                <div className="text-center bg-blue-50 p-4 rounded-lg"><span className="text-2xl font-mono text-primary-dark font-bold">f(x) = {formatAffine(ms, ps)}</span></div>
-                                <input type="range" min="-5" max="5" value={ms} onChange={(e) => setMs(parseFloat(e.target.value) || 1)} className="w-full h-2 bg-gray-200 rounded-lg accent-accent" />
-                                <input type="range" min="-10" max="10" value={ps} onChange={(e) => setPs(parseFloat(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg accent-orange-600" />
-                                <div className="mt-4">
-                                    <h4 className="font-bold text-primary mb-2 flex items-center gap-2"><MinusCircle size={18}/> Tableau de Signes</h4>
-                                    {ms === 0 ? <p className="text-red-500">Fonction constante.</p> : (
-                                        <div className="border border-gray-300 rounded overflow-x-auto text-center w-full">
-                                            <div className="min-w-[300px]">
-                                                <div className="grid grid-cols-3 bg-gray-100 border-b border-gray-300 font-bold p-3">
-                                                    <div>x</div>
-                                                    <div className="border-l border-r border-gray-300 grid grid-cols-3"><span>-∞</span><span className="text-primary-dark">{-ps/ms}</span><span>+∞</span></div>
-                                                    <div></div>
-                                                </div>
-                                                <div className="grid grid-cols-3 p-3 items-center">
-                                                    <div className="font-mono">f(x)</div>
-                                                    <div className="grid grid-cols-3 border-l border-r border-gray-300"><span className="text-xl font-bold">{ms > 0 ? '−' : '+'}</span><span className="font-bold border-l border-r border-gray-200">0</span><span className="text-xl font-bold">{ms > 0 ? '+' : '−'}</span></div>
-                                                    <div></div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                            <FunctionGraph m={ms} p={ps} height={450} />
-                        </div>
-                    )}
-                </div>
-            );
+            <div style={{display:'inline-flex', alignItems:'center', gap:'8px', marginTop:'12px', padding:'7px 16px', borderRadius:'999px', fontWeight:700, fontSize:'0.92rem', background:monotonyBg, color:monotonyColor, border:`1.5px solid ${monotonyBorder}`}}>
+              {monotonyText}
+            </div>
+
+            <div style={{marginTop:'14px', padding:'12px 16px', borderRadius:'10px', fontSize:'0.9rem', lineHeight:'1.6', borderLeft:'4px solid #3b82f6', background:'#eff6ff', color:'#1e3a5f'}}>
+              {explainText}
+            </div>
+          </div>
+        </div>
+
+        <div style={{flex:'2 1 340px', minWidth:'300px'}}>
+          <canvas
+            ref={canvasRef}
+            width={460}
+            height={460}
+            style={{width:'100%', aspectRatio:'1', borderRadius:'12px', border:'1.5px solid #e2e8f0', display:'block'}}
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+      const [tab, setTab] = useState('bases');
+      const [num, setNum] = useState(2);
+      const [den, setDen] = useState(3);
+      const [p, setP] = useState(-1);
+
+      const mFrac = useMemo(() => simplifyFraction(num, den), [num, den]);
+      const scenario = useMemo(() => {
+        const denv = mFrac.den;
+        const x0 = 0;
+        const y0 = p;
+        const x1 = denv;
+        const y1 = p + mFrac.num;
+        return {
+          mFrac,
+          p,
+          points: [{ x: x0, y: y0 }, { x: x1, y: y1 }]
         };
+      }, [mFrac, p]);
 
-        const QuizSection = ({ mode, onTestComplete, onViewDiploma }) => {
-            const [started, setStarted] = useState(false);
-            const [name, setName] = useState('');
-            const [currentQuestion, setCurrentQuestion] = useState(null);
-            const [userAnswer, setUserAnswer] = useState('');
-            const [feedback, setFeedback] = useState(null);
-            const [score, setScore] = useState(0);
-            const [questionCount, setQuestionCount] = useState(0);
-            const [history, setHistory] = useState([]);
-            const [timeLeft, setTimeLeft] = useState(mode === 'TEST' ? 1200 : 0);
-            const [isFinished, setIsFinished] = useState(false);
-            const TOTAL_TEST_QUESTIONS = 20;
+      const variation = mFrac.num > 0 ? 'croissante' : (mFrac.num < 0 ? 'décroissante' : 'constante');
+      const type = p === 0 ? 'linéaire' : (mFrac.num === 0 ? 'constante' : 'affine');
 
-            useEffect(() => {
-                let interval;
-                if (started && mode === 'TEST' && timeLeft > 0 && !isFinished) {
-                    interval = setInterval(() => {
-                        setTimeLeft(prev => { if (prev <= 1) { finishQuiz(); return 0; } return prev - 1; });
-                    }, 1000);
-                }
-                return () => clearInterval(interval);
-            }, [started, mode, timeLeft, isFinished]);
+      return (
+        <div className="space-y-6">
+          <div className="bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-3xl p-6 shadow-lg">
+            <h2 className="text-3xl font-serif font-bold">Comprendre les fonctions affines</h2>
+            <p className="mt-2 text-blue-50">
+              Pente, ordonnée à l'origine, types de fonctions et variation.
+            </p>
+          </div>
 
-            const startQuiz = () => {
-                if (mode === 'TEST' && !name.trim()) { alert("Entre ton nom !"); return; }
-                setStarted(true); setScore(0); setQuestionCount(0); setHistory([]); setFeedback(null); setIsFinished(false); setTimeLeft(1200);
-                nextQuestion();
-            };
+          <div className="flex flex-wrap gap-2">
+            {[
+              ['bases', 'Bases'],
+              ['types', 'Types de fonctions'],
+              ['variation', 'Variation et pente']
+            ].map(([id, label]) => (
+              <button
+                key={id}
+                onClick={() => setTab(id)}
+                className={`px-4 py-2 rounded-full font-semibold border transition ${
+                  tab === id ? 'bg-primary text-white border-primary' : 'bg-white border-slate-200 text-slate-700'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
 
-            const nextQuestion = () => {
-                setUserAnswer(''); setFeedback(null);
-                setCurrentQuestion(generateQuestion(mode === 'TRAINING' ? 'TRAINING' : 'TEST'));
-            };
+          {tab === 'bases' && (
+            <div className="grid lg:grid-cols-2 gap-6 animate-fade-in">
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-5">
+                <h3 className="text-xl font-bold text-primary-dark">Manipuler y = mx + p</h3>
 
-            const handleAnswerSubmit = (e) => {
-                e.preventDefault();
-                if (!currentQuestion || isFinished) return;
-                const isCorrect = checkAnswer(userAnswer, currentQuestion.correctAnswer, currentQuestion.answerType);
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Numérateur de la pente (Δy)</label>
+                  <input
+                    type="range"
+                    min="-5"
+                    max="5"
+                    step="1"
+                    value={num}
+                    onChange={(e) => {
+                      const v = parseInt(e.target.value, 10);
+                      setNum(v === 0 ? 1 : v);
+                    }}
+                    className="w-full accent-primary"
+                  />
+                  <div className="mt-1 text-sm text-slate-600">numérateur = {num}</div>
+                </div>
 
-                if (mode === 'TRAINING') {
-                    setFeedback({ isCorrect, msg: isCorrect ? "Bravo !" : `Faux. ${currentQuestion.explanation}` });
-                    if (isCorrect) setScore(s => s + 1);
-                } else {
-                    setFeedback({ isCorrect, msg: "Enregistré." });
-                    if (isCorrect) setScore(s => s + 1);
-                    setHistory(prev => [...prev, {
-                        questionText: currentQuestion.text,
-                        userAnswer: userAnswer,
-                        correctAnswer: String(currentQuestion.correctAnswer),
-                        isCorrect,
-                        explanation: currentQuestion.explanation,
-                        graphData: currentQuestion.graphData
-                    }]);
-                    setQuestionCount(prev => {
-                        const newCount = prev + 1;
-                        if (newCount >= TOTAL_TEST_QUESTIONS) setTimeout(finishQuiz, 1000);
-                        else setTimeout(nextQuestion, 1000);
-                        return newCount;
-                    });
-                }
-            };
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Dénominateur de la pente (Δx)</label>
+                  <input
+                    type="range"
+                    min="1"
+                    max="5"
+                    step="1"
+                    value={den}
+                    onChange={(e) => setDen(parseInt(e.target.value, 10))}
+                    className="w-full accent-secondary"
+                  />
+                  <div className="mt-1 text-sm text-slate-600">dénominateur = {den}</div>
+                </div>
 
-            const handleTrainingNext = () => {
-                if (currentQuestion) {
-                     setHistory(prev => [...prev, { questionText: currentQuestion.text, userAnswer: userAnswer, correctAnswer: String(currentQuestion.correctAnswer), isCorrect: feedback?.isCorrect || false, explanation: currentQuestion.explanation }]);
-                }
-                setQuestionCount(s => s + 1);
-                nextQuestion();
-            };
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Ordonnée à l'origine p</label>
+                  <input
+                    type="range"
+                    min="-5"
+                    max="5"
+                    step="1"
+                    value={p}
+                    onChange={(e) => setP(parseInt(e.target.value, 10))}
+                    className="w-full accent-accent"
+                  />
+                  <div className="mt-1 text-sm text-slate-600">p = {p}</div>
+                </div>
 
-            const finishQuiz = () => {
-                setIsFinished(true);
-                if (mode === 'TEST' && onTestComplete) onTestComplete(score, TOTAL_TEST_QUESTIONS, name);
-            };
+                <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4 space-y-2">
+                  <div className="text-lg font-bold text-slate-800">{formatEquation(mFrac, p)}</div>
+                  <div className="text-sm text-slate-700">Pente : m = {fracToString(mFrac)}</div>
+                  <div className="text-sm text-slate-700">Type : {type}</div>
+                  <div className="text-sm text-slate-700">Variation : {variation}</div>
+                </div>
 
-            const formatTime = (s) => `${Math.floor(s / 60)}:${s % 60 < 10 ? '0' : ''}${s % 60}`;
-            const getPlaceholder = (type) => { if (type === 'YES_NO') return "Oui ou Non"; if (type === 'EQUATION') return "Ex: y=2x+3"; if (type === 'FRACTION') return "Ex: 1/2"; return "Ta réponse"; };
+                <div className="rounded-2xl bg-blue-50 border border-blue-200 p-4 text-sm text-slate-700">
+                  <p>Pour lire une pente (Δy/Δx) fractionnaire comme 2/3, on avance de 3 vers la droite (Δx = 3) puis on monte de 2 (Δy=2).</p>
+                  <p className="mt-2">Pour une pente négative comme -3/4, on avance de 4 vers la droite (Δx = 4) puis on descend de 3 (Δy = -3). </p>
+                  <p> Quand la pente m est positive (+), la droite est croissante.</p>
+                  <p> Quand la pente m est négative (-), la droite est décroissante.</p>
+                </div>
+              </div>
 
-            if (!started) {
-                return (
-                    <div className="text-center space-y-6 max-w-md mx-auto py-10 animate-fade-in">
-                        <h3 className="text-2xl font-serif font-bold text-primary-dark">{mode === 'TRAINING' ? "Entraînement Libre" : "Test Final"}</h3>
-                        <p className="text-gray-600">{mode === 'TRAINING' ? "Pratique sans limite de temps. Reçois des explications immédiates." : "20 questions, 20 minutes. Obtiens 16/20 pour décrocher ton diplôme !"}</p>
-                        {mode === 'TEST' && <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ton Nom" className="w-full border-2 border-gray-300 rounded-lg p-3" />}
-                        <button onClick={startQuiz} className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3 px-6 rounded-full shadow-lg transform transition hover:-translate-y-1">{mode === 'TRAINING' ? "Commencer" : "Lancer"}</button>
-                    </div>
-                );
+              <GraphSVG scenario={scenario} showGuide={true} />
+            </div>
+          )}
+
+          {tab === 'types' && (
+            <div className="grid md:grid-cols-3 gap-5 animate-fade-in">
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                <h3 className="font-bold text-primary-dark text-lg">Fonction affine</h3>
+                <p className="mt-3 text-slate-700">Forme générale : y = mx + p.</p>
+                <p className="mt-2 text-slate-700">Exemple : y = 2/3x - 4.</p>
+                <p className="mt-2 text-slate-700">C'est la famille la plus large ici.</p>
+              </div>
+
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                <h3 className="font-bold text-primary-dark text-lg">Fonction linéaire</h3>
+                <p className="mt-3 text-slate-700">Forme : y = mx.</p>
+                <p className="mt-2 text-slate-700">L'ordonnée à l'origine vaut 0.</p>
+                <p className="mt-2 text-slate-700">Toute fonction linéaire est affine.</p>
+              </div>
+
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                <h3 className="font-bold text-primary-dark text-lg">Fonction constante</h3>
+                <p className="mt-3 text-slate-700">Forme : y = p.</p>
+                <p className="mt-2 text-slate-700">La pente vaut 0.</p>
+                <p className="mt-2 text-slate-700">C'est aussi une fonction affine particulière.</p>
+              </div>
+            </div>
+          )}
+
+{tab === 'variation' && (
+  <div className="animate-fade-in space-y-5">
+
+    <div className="grid md:grid-cols-3 gap-5">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+        <h3 className="font-bold text-lg text-primary-dark">Si m &gt; 0</h3>
+        <p className="mt-3 text-slate-700">La droite monte quand on va vers la droite.</p>
+        <p className="mt-2 text-slate-700">La fonction est <strong>croissante</strong>.</p>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+        <h3 className="font-bold text-lg text-primary-dark">Si m &lt; 0</h3>
+        <p className="mt-3 text-slate-700">La droite descend quand on va vers la droite.</p>
+        <p className="mt-2 text-slate-700">La fonction est <strong>décroissante</strong>.</p>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+        <h3 className="font-bold text-lg text-primary-dark">Si m = 0</h3>
+        <p className="mt-3 text-slate-700">La droite est horizontale.</p>
+        <p className="mt-2 text-slate-700">La fonction est <strong>constante</strong>.</p>
+      </div>
+    </div>
+
+    <VariationWidget />
+  </div>
+)}
+        </div>
+      );
+    };
+
+    // =========================
+    // EXERCICES
+    // =========================
+
+    const PracticeSection = () => {
+      const TOTAL = 8;
+      const LIMIT = 8 * 60;
+
+      const [started, setStarted] = useState(false);
+      const [done, setDone] = useState(false);
+      const [timeLeft, setTimeLeft] = useState(LIMIT);
+      const [index, setIndex] = useState(0);
+      const [question, setQuestion] = useState(null);
+      const [answer, setAnswer] = useState('');
+      const [score, setScore] = useState(0);
+      const [feedback, setFeedback] = useState(null);
+      const [history, setHistory] = useState([]);
+
+      useEffect(() => {
+        if (!started || done) return;
+        const id = setInterval(() => {
+          setTimeLeft(prev => {
+            if (prev <= 1) {
+              setDone(true);
+              return 0;
             }
+            return prev - 1;
+          });
+        }, 1000);
+        return () => clearInterval(id);
+      }, [started, done]);
 
-            if (isFinished && mode === 'TEST') {
-                return (
-                    <div className="text-center py-8 space-y-6 animate-fade-in w-full">
-                        <h3 className="text-2xl font-bold text-primary-dark">Test Terminé !</h3>
-                        <div className="text-4xl font-black text-secondary-dark mb-4">{score} / {TOTAL_TEST_QUESTIONS}</div>
-                        {score >= 16 ? (
-                            <div className="space-y-4">
-                                <div className="p-4 bg-green-100 text-green-800 rounded-lg border border-green-200">Incroyable ! Tu as réussi !</div>
-                                <button onClick={onViewDiploma} className="bg-secondary hover:bg-secondary-dark text-white font-bold py-3 px-8 rounded-full shadow-lg transform transition hover:scale-105 animate-bounce-in flex items-center justify-center gap-2 mx-auto">
-                                    <Trophy size={20} /> Récupérer mon Diplôme
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="p-4 bg-yellow-50 text-yellow-800 rounded-lg border border-yellow-200">Bien joué ! Continue de t'entraîner pour atteindre 16/20.</div>
-                        )}
-                        <div className="text-left bg-white rounded-lg shadow border p-4 max-h-[500px] overflow-y-auto mt-6 custom-scroll">
-                            <h4 className="font-bold border-b pb-2 mb-4 text-gray-700 flex items-center gap-2"><HelpCircle size={18} /> Correction Détaillée</h4>
-                            <ul className="space-y-4">
-                                {history.map((h, i) => (
-                                    <li key={i} className={`p-4 rounded-lg border ${h.isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                                        <div className="font-bold text-gray-800 mb-2">Q{i+1} : {h.questionText}</div>
-                                        {h.graphData && <div className="mb-2 max-w-xs mx-auto"><FunctionGraph m={h.graphData.m} p={h.graphData.p} height={200} /></div>}
-                                        <div className="flex flex-col sm:flex-row gap-2 sm:gap-6 text-sm mb-2">
-                                            <span className={h.isCorrect ? 'text-green-700 font-bold' : 'text-red-700 font-bold'}>Ta réponse : {h.userAnswer || "(Vide)"}</span>
-                                            {!h.isCorrect && <span className="text-gray-600 font-bold">Réponse attendue : {h.correctAnswer}</span>}
-                                        </div>
-                                        {!h.isCorrect && <div className="text-sm text-gray-600 italic border-t pt-2 border-dashed border-gray-300">💡 {h.explanation}</div>}
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                        <button onClick={() => setStarted(false)} className="flex items-center justify-center gap-2 mx-auto bg-gray-600 text-white px-6 py-2 rounded-full hover:bg-gray-700 mt-4"><RotateCcw size={18} /> Retour</button>
-                    </div>
-                );
-            }
+      const start = () => {
+        setStarted(true);
+        setDone(false);
+        setTimeLeft(LIMIT);
+        setIndex(0);
+        setScore(0);
+        setAnswer('');
+        setFeedback(null);
+        setHistory([]);
+        setQuestion(makeExerciseQuestion(0));
+      };
 
-            return (
-                <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
-                    <div className="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-                        <div className="font-bold text-gray-700 flex items-center gap-2">
-                            {mode === 'TEST' ? <Timer className="text-primary" /> : <Award className="text-secondary" />}
-                            {mode === 'TEST' ? <span className={timeLeft < 60 ? "text-red-500 animate-pulse" : ""}>{formatTime(timeLeft)}</span> : `Série : ${score}`}
-                        </div>
-                        <div className="font-mono text-gray-500">Question {mode === 'TEST' ? `${questionCount + 1} / ${TOTAL_TEST_QUESTIONS}` : questionCount + 1}</div>
-                    </div>
-                    <div className="bg-white p-6 md:p-8 rounded-xl shadow-lg border-t-4 border-primary text-center space-y-6">
-                        <h4 className="text-xl font-medium text-gray-800 leading-relaxed">{currentQuestion?.text}</h4>
-                        {currentQuestion?.graphData && <div className="mx-auto max-w-sm mb-4"><FunctionGraph m={currentQuestion.graphData.m} p={currentQuestion.graphData.p} showPoints={true} height={300} /></div>}
-                        <form onSubmit={handleAnswerSubmit} className="flex flex-col items-center gap-4">
-                            <div className="relative w-full max-w-xs">
-                                <input type="text" value={userAnswer} onChange={(e) => setUserAnswer(e.target.value)} placeholder={getPlaceholder(currentQuestion?.answerType)} className="w-full text-center text-xl font-bold py-3 px-6 rounded-lg border-2 border-gray-200 focus:border-primary outline-none transition-all" autoFocus disabled={!!feedback && mode === 'TRAINING'} autoComplete="off" />
-                                {currentQuestion?.answerType === 'FRACTION' && <div className="absolute right-3 top-3 text-gray-400"><Calculator size={20} /></div>}
-                            </div>
-                            {(!feedback || mode === 'TEST') && <button type="submit" disabled={mode === 'TEST' && !userAnswer} className="bg-primary hover:bg-primary-dark disabled:bg-gray-300 text-white font-bold py-2 px-8 rounded-full shadow transition">Valider</button>}
-                        </form>
-                        {feedback && mode === 'TRAINING' && (
-                            <div className={`p-4 rounded-lg border flex flex-col items-center gap-2 animate-bounce-in ${feedback.isCorrect ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
-                                <div className="flex items-center gap-2 text-lg font-bold">{feedback.isCorrect ? <CheckCircle /> : <XCircle />} {feedback.msg}</div>
-                                <button onClick={handleTrainingNext} className="mt-2 bg-gray-800 text-white px-6 py-2 rounded-full text-sm hover:bg-black transition">Question Suivante →</button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            );
-        };
+      const submit = () => {
+        if (!question || feedback) return;
+        if (!answer.trim()) return;
 
-        const DiplomaSection = ({ name, score }) => {
-            const canvasRef = useRef(null);
-            useEffect(() => {
-                const canvas = canvasRef.current;
-                if (!canvas) return;
-                const ctx = canvas.getContext('2d');
-                canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-                const particles = [];
-                const colors = ['#007bff', '#ffc107', '#28a745', '#dc3545'];
-                for(let i=0; i<150; i++) particles.push({x: Math.random()*canvas.width, y: Math.random()*canvas.height-canvas.height, size: Math.random()*8+4, color: colors[Math.floor(Math.random()*colors.length)], speed: Math.random()*3+2, angle: Math.random()*6.28, spin: Math.random()*0.2-0.1});
-                const animate = () => {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    particles.forEach(p => {
-                        p.y += p.speed; p.angle += p.spin; p.x += Math.sin(p.angle)*0.5;
-                        if(p.y > canvas.height) { p.y = -10; p.x = Math.random()*canvas.width; }
-                        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.angle); ctx.fillStyle = p.color; ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size); ctx.restore();
-                    });
-                    requestAnimationFrame(animate);
-                };
-                const id = requestAnimationFrame(animate);
-                return () => cancelAnimationFrame(id);
-            }, []);
+        const ok = checkAnswer(question, answer);
+        if (ok) setScore(s => s + 1);
 
-            return (
-                <div className="relative min-h-[600px] flex items-center justify-center p-4">
-                    <canvas ref={canvasRef} className="fixed top-0 left-0 pointer-events-none z-0" />
-                    <div className="relative z-10 bg-white p-12 max-w-3xl w-full border-[20px] border-double border-primary/20 shadow-2xl rounded-lg text-center font-serif">
-                        <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-secondary text-white p-4 rounded-full shadow-lg border-4 border-white"><span className="text-5xl">🎓</span></div>
-                        <h1 className="text-4xl md:text-5xl font-bold text-primary-dark mt-8 mb-6 uppercase tracking-widest">Diplôme d'Expert</h1>
-                        <p className="text-xl text-gray-600 mb-2">Ce certificat est fièrement décerné à</p>
-                        <div className="text-4xl font-bold text-accent my-6 border-b-2 border-secondary inline-block pb-2 px-8">{name || "Apprenant Mystère"}</div>
-                        <p className="text-lg text-gray-600 mb-8 max-w-lg mx-auto leading-relaxed">Pour avoir démontré une maîtrise exceptionnelle des <strong>fonctions affines</strong>, des pentes et des systèmes d'équations.</p>
-                        <div className="flex justify-center items-center gap-4 mb-8">
-                            <div className="bg-gray-100 px-6 py-3 rounded-lg border border-gray-200"><span className="block text-xs text-gray-500 uppercase font-bold">Score Final</span><span className="text-2xl font-black text-primary">{score} / 20</span></div>
-                        </div>
-                        <div className="flex justify-between items-end mt-12 text-sm text-gray-500 font-sans border-t pt-4">
-                            <div className="text-left"><p>Date : {new Date().toLocaleDateString('fr-FR')}</p></div>
-                            <div className="text-right italic"><p>~ L'équipe De Zéro à Héros ~</p></div>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
+        setFeedback({
+          ok,
+          explanation: question.explanation,
+          correctAnswer: question.correctAnswer
+        });
 
-        const App = () => {
-            const [activeTab, setActiveTab] = useState('LEARNING');
-            const [diplomaData, setDiplomaData] = useState(null);
+        setHistory(prev => [...prev, {
+          prompt: question.prompt,
+          userAnswer: answer,
+          correct: question.correctAnswer,
+          ok,
+          explanation: question.explanation
+        }]);
+      };
 
-            const handleTestComplete = (score, maxScore, name) => {
-                if (score >= 16) {
-                    setDiplomaData({ name, score });
-                    // Modification : Plus de navigation automatique !
-                }
-            };
+      const next = () => {
+        const newIndex = index + 1;
+        if (newIndex >= TOTAL) {
+          setDone(true);
+          return;
+        }
+        setIndex(newIndex);
+        setQuestion(makeExerciseQuestion(newIndex));
+        setAnswer('');
+        setFeedback(null);
+      };
 
-            const NavButton = ({ id, label, icon: Icon, active }) => (
-                <button onClick={() => setActiveTab(id)} className={`flex items-center gap-2 px-5 py-3 rounded-full font-bold transition-all transform hover:-translate-y-1 shadow-sm ${active ? 'bg-primary text-white shadow-md scale-105' : 'bg-white text-gray-600 hover:bg-blue-50'}`}>
-                    <Icon size={18} /> <span className="hidden sm:inline">{label}</span>
+      return (
+        <div className="space-y-6">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <h2 className="text-3xl font-serif font-bold text-primary-dark">Exercices guidés</h2>
+                <p className="mt-2 text-slate-600">
+                  Correction immédiate.
+                </p>
+              </div>
+              <TimerBadge seconds={timeLeft} />
+            </div>
+
+            {!started && (
+              <div className="mt-6">
+                <button
+                  onClick={start}
+                  className="inline-flex items-center gap-2 bg-primary hover:bg-primary-dark text-white font-bold px-5 py-3 rounded-xl"
+                >
+                  <PlayCircle size={20} />
+                  Commencer les exercices
                 </button>
-            );
+              </div>
+            )}
+          </div>
 
-            return (
-                <div className="min-h-screen bg-gray-50 pb-10">
-                    <div className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
-                        <div className="max-w-5xl mx-auto px-4 py-3">
-                            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                                <h1 className="text-2xl font-serif font-bold text-primary flex items-center gap-2">🚀 Fonctions Affines</h1>
-                                <nav className="flex gap-2 sm:gap-4 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 justify-center">
-                                    <NavButton id="LEARNING" label="Apprendre" icon={BookOpen} active={activeTab === 'LEARNING'} />
-                                    <NavButton id="TRAINING" label="Exercices" icon={PenTool} active={activeTab === 'TRAINING'} />
-                                    <NavButton id="TEST" label="Test Final" icon={Award} active={activeTab === 'TEST'} />
-                                    {diplomaData && <NavButton id="DIPLOMA" label="Diplôme" icon={Trophy} active={activeTab === 'DIPLOMA'} />}
-                                </nav>
-                            </div>
-                        </div>
-                    </div>
-                    <main className="max-w-4xl mx-auto px-4 mt-8">
-                        <div className="bg-white/50 rounded-2xl p-2 sm:p-6 min-h-[500px]">
-                            {activeTab === 'LEARNING' && <LearningSection />}
-                            {activeTab === 'TRAINING' && <QuizSection mode="TRAINING" />}
-                            {activeTab === 'TEST' && <QuizSection mode="TEST" onTestComplete={handleTestComplete} onViewDiploma={() => setActiveTab('DIPLOMA')} />}
-                            {activeTab === 'DIPLOMA' && diplomaData && <DiplomaSection name={diplomaData.name} score={diplomaData.score} />}
-                        </div>
-                    </main>
-                    <footer className="text-center text-gray-400 text-sm mt-12 pb-4">© 2025 ES - De Zéro à Héros</footer>
+          {started && !done && question && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between text-sm text-slate-600">
+                <span>Question {index + 1} / {TOTAL}</span>
+                <span>Score : {score}</span>
+              </div>
+
+              <QuestionCard question={question} />
+
+              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+                <OpenInput question={question} answer={answer} setAnswer={setAnswer} locked={!!feedback} />
+
+                {!feedback ? (
+                  <button
+                    onClick={submit}
+                    className="bg-primary hover:bg-primary-dark text-white font-bold px-5 py-3 rounded-xl"
+                  >
+                    Vérifier
+                  </button>
+                ) : (
+                  <>
+                    <FeedbackBox
+                      ok={feedback.ok}
+                      explanation={feedback.explanation}
+                      correctAnswer={feedback.correctAnswer}
+                    />
+                    <button
+                      onClick={next}
+                      className="bg-slate-900 hover:bg-slate-800 text-white font-bold px-5 py-3 rounded-xl"
+                    >
+                      Question suivante
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {done && started && (
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-5">
+              <div className="flex items-center gap-3">
+                <PenTool className="text-primary" />
+                <h3 className="text-2xl font-bold text-primary-dark">Bilan des exercices</h3>
+              </div>
+
+              <div className="text-lg font-semibold text-slate-800">
+                Score : {score} / {history.length || TOTAL}
+              </div>
+
+              <div className="space-y-3 max-h-[420px] overflow-y-auto custom-scroll pr-1">
+                {history.map((h, i) => (
+                  <div key={i} className={`rounded-2xl border p-4 ${h.ok ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                    <div className="font-semibold text-slate-800">{i + 1}. {h.prompt}</div>
+                    <div className="mt-2 text-sm text-slate-700">Ta réponse : {h.userAnswer}</div>
+                    <div className="text-sm text-slate-700">Réponse attendue : {h.correct}</div>
+                    <div className="mt-2 text-sm text-slate-700">{h.explanation}</div>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={start}
+                className="inline-flex items-center gap-2 bg-primary hover:bg-primary-dark text-white font-bold px-5 py-3 rounded-xl"
+              >
+                <RotateCcw size={18} />
+                Recommencer
+              </button>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    // =========================
+    // QCM
+    // =========================
+
+    const MCQSection = () => {
+      const TOTAL = 12;
+      const LIMIT = 10 * 60;
+
+      const [started, setStarted] = useState(false);
+      const [done, setDone] = useState(false);
+      const [timeLeft, setTimeLeft] = useState(LIMIT);
+      const [index, setIndex] = useState(0);
+      const [question, setQuestion] = useState(null);
+      const [selected, setSelected] = useState('');
+      const [feedback, setFeedback] = useState(null);
+      const [score, setScore] = useState(0);
+      const [history, setHistory] = useState([]);
+
+      useEffect(() => {
+        if (!started || done) return;
+        const id = setInterval(() => {
+          setTimeLeft(prev => {
+            if (prev <= 1) {
+              setDone(true);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+        return () => clearInterval(id);
+      }, [started, done]);
+
+      const start = () => {
+        setStarted(true);
+        setDone(false);
+        setTimeLeft(LIMIT);
+        setIndex(0);
+        setScore(0);
+        setSelected('');
+        setFeedback(null);
+        setHistory([]);
+        setQuestion(makeQCMQuestion(0));
+      };
+
+      const submit = () => {
+        if (!question || feedback || !selected) return;
+        const ok = checkAnswer(question, selected);
+        if (ok) setScore(s => s + 1);
+
+        setFeedback({
+          ok,
+          explanation: question.explanation,
+          correctAnswer: question.correctAnswer
+        });
+
+        setHistory(prev => [...prev, {
+          prompt: question.prompt,
+          userAnswer: selected,
+          correct: question.correctAnswer,
+          ok,
+          explanation: question.explanation
+        }]);
+      };
+
+      const next = () => {
+        const newIndex = index + 1;
+        if (newIndex >= TOTAL) {
+          setDone(true);
+          return;
+        }
+        setIndex(newIndex);
+        setQuestion(makeQCMQuestion(newIndex));
+        setSelected('');
+        setFeedback(null);
+      };
+
+      return (
+        <div className="space-y-6">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <h2 className="text-3xl font-serif font-bold text-primary-dark">QCM</h2>
+                <p className="mt-2 text-slate-600">
+                  Questions à choix multiples pour se préparer au test final.
+                </p>
+              </div>
+              <TimerBadge seconds={timeLeft} />
+            </div>
+
+            {!started && (
+              <div className="mt-6">
+                <button
+                  onClick={start}
+                  className="inline-flex items-center gap-2 bg-primary hover:bg-primary-dark text-white font-bold px-5 py-3 rounded-xl"
+                >
+                  <ListChecks size={20} />
+                  Lancer le QCM
+                </button>
+              </div>
+            )}
+          </div>
+
+          {started && !done && question && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between text-sm text-slate-600">
+                <span>Question {index + 1} / {TOTAL}</span>
+                <span>Score : {score}</span>
+              </div>
+
+              <QuestionCard question={question} />
+
+              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+                <MCQOptions
+                  options={question.options}
+                  selected={selected}
+                  setSelected={setSelected}
+                  locked={!!feedback}
+                />
+
+                {!feedback ? (
+                  <button
+                    onClick={submit}
+                    className="bg-primary hover:bg-primary-dark text-white font-bold px-5 py-3 rounded-xl"
+                  >
+                    Valider
+                  </button>
+                ) : (
+                  <>
+                    <FeedbackBox
+                      ok={feedback.ok}
+                      explanation={feedback.explanation}
+                      correctAnswer={feedback.correctAnswer}
+                    />
+                    <button
+                      onClick={next}
+                      className="bg-slate-900 hover:bg-slate-800 text-white font-bold px-5 py-3 rounded-xl"
+                    >
+                      Question suivante
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {done && started && (
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-5">
+              <div className="flex items-center gap-3">
+                <BrainCircuit className="text-primary" />
+                <h3 className="text-2xl font-bold text-primary-dark">Bilan du QCM</h3>
+              </div>
+
+              <div className="text-lg font-semibold text-slate-800">
+                Score : {score} / {history.length || TOTAL}
+              </div>
+
+              <div className="space-y-3 max-h-[420px] overflow-y-auto custom-scroll pr-1">
+                {history.map((h, i) => (
+                  <div key={i} className={`rounded-2xl border p-4 ${h.ok ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                    <div className="font-semibold text-slate-800">{i + 1}. {h.prompt}</div>
+                    <div className="mt-2 text-sm text-slate-700">Ta réponse : {h.userAnswer}</div>
+                    <div className="text-sm text-slate-700">Bonne réponse : {h.correct}</div>
+                    <div className="mt-2 text-sm text-slate-700">{h.explanation}</div>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={start}
+                className="inline-flex items-center gap-2 bg-primary hover:bg-primary-dark text-white font-bold px-5 py-3 rounded-xl"
+              >
+                <RotateCcw size={18} />
+                Refaire le QCM
+              </button>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    // =========================
+    // TEST FINAL
+    // =========================
+
+    const FinalTestSection = () => {
+      const TOTAL = 20;
+      const LIMIT = 20 * 60;
+
+      const [started, setStarted] = useState(false);
+      const [done, setDone] = useState(false);
+      const [studentName, setStudentName] = useState('');
+      const [timeLeft, setTimeLeft] = useState(LIMIT);
+      const [index, setIndex] = useState(0);
+      const [question, setQuestion] = useState(null);
+      const [answer, setAnswer] = useState('');
+      const [selected, setSelected] = useState('');
+      const [score, setScore] = useState(0);
+      const [history, setHistory] = useState([]);
+
+      useEffect(() => {
+        if (!started || done) return;
+        const id = setInterval(() => {
+          setTimeLeft(prev => {
+            if (prev <= 1) {
+              setDone(true);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+        return () => clearInterval(id);
+      }, [started, done]);
+
+      const start = () => {
+        if (!studentName.trim()) {
+          alert("Entre le nom de l'élève avant de commencer.");
+          return;
+        }
+        setStarted(true);
+        setDone(false);
+        setTimeLeft(LIMIT);
+        setIndex(0);
+        setScore(0);
+        setAnswer('');
+        setSelected('');
+        setHistory([]);
+        setQuestion(makeFinalQuestion(0));
+      };
+
+      const submit = () => {
+        if (!question) return;
+
+        const userValue = question.kind === 'MCQ' ? selected : answer;
+        if (!String(userValue).trim()) return;
+
+        const ok = checkAnswer(question, userValue);
+        if (ok) setScore(s => s + 1);
+
+        setHistory(prev => [...prev, {
+          prompt: question.prompt,
+          type: question.kind,
+          userAnswer: userValue,
+          correct: question.correctAnswer,
+          ok,
+          explanation: question.explanation
+        }]);
+
+        const newIndex = index + 1;
+        if (newIndex >= TOTAL) {
+          setDone(true);
+          return;
+        }
+
+        setIndex(newIndex);
+        setQuestion(makeFinalQuestion(newIndex));
+        setAnswer('');
+        setSelected('');
+      };
+
+      const restart = () => {
+        setStarted(false);
+        setDone(false);
+        setTimeLeft(LIMIT);
+        setIndex(0);
+        setQuestion(null);
+        setAnswer('');
+        setSelected('');
+        setScore(0);
+        setHistory([]);
+      };
+
+      const percentage = history.length ? Math.round((score / history.length) * 100) : 0;
+      const mention =
+        percentage >= 95 ? 'La perfection, Félicitations 🧠' : 
+        percentage >= 85 ? 'Excellente maîtrise 🦾' :
+        percentage >= 70 ? 'Bonne maîtrise, peux-tu encore te dépasser ?😎' :
+        percentage >= 50 ? 'Maîtrise en construction, recommence 🍀' :
+        'À retravailler, revois la section Apprendre 🎞️';
+
+      return (
+        <div className="space-y-6">
+          <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-3xl p-6 shadow-lg">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div>
+                <h2 className="text-3xl font-serif font-bold">Test final</h2>
+                <p className="mt-2 text-orange-50">
+                  Essaie d'avoir 20/20 en 20 minutes.
+                </p>
+              </div>
+              <div className="bg-white/15 border border-white/20 rounded-2xl px-4 py-3">
+                <div className="text-sm font-semibold">Durée</div>
+                <div className="text-2xl font-bold">{formatTime(timeLeft)}</div>
+              </div>
+            </div>
+          </div>
+
+          {!started && !done && (
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-4">
+              <label className="block">
+                <span className="text-sm font-semibold text-slate-700">Nom et prénom</span>
+                <input
+                  type="text"
+                  value={studentName}
+                  onChange={(e) => setStudentName(e.target.value)}
+                  className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:ring-2 focus:ring-orange-200"
+                  placeholder="Exemple: Eli Copter"
+                />
+              </label>
+
+              <button
+                onClick={start}
+                className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-bold px-5 py-3 rounded-xl"
+              >
+                <GraduationCap size={20} />
+                Commencer le test final
+              </button>
+            </div>
+          )}
+
+          {started && !done && question && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between text-sm text-slate-600">
+                <span>Question {index + 1} / {TOTAL}</span>
+                <span>Réussites : {score}</span>
+              </div>
+
+              <QuestionCard question={question} />
+
+              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+                {question.kind === 'MCQ' ? (
+                  <MCQOptions
+                    options={question.options}
+                    selected={selected}
+                    setSelected={setSelected}
+                  />
+                ) : (
+                  <OpenInput question={question} answer={answer} setAnswer={setAnswer} />
+                )}
+
+                <button
+                  onClick={submit}
+                  className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-5 py-3 rounded-xl"
+                >
+                  Enregistrer et continuer
+                </button>
+              </div>
+            </div>
+          )}
+
+          {done && (
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-6">
+              <div className="flex items-center gap-3">
+                <Trophy className="text-amber-500" />
+                <h3 className="text-2xl font-bold text-primary-dark">Résultat final</h3>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-4">
+                <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4">
+                  <div className="text-sm text-slate-500">Élève</div>
+                  <div className="text-lg font-bold text-slate-800">{studentName || '—'}</div>
                 </div>
-            );
-        };
+                <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4">
+                  <div className="text-sm text-slate-500">Score</div>
+                  <div className="text-lg font-bold text-slate-800">{score} / {history.length || TOTAL}</div>
+                </div>
+                <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4">
+                  <div className="text-sm text-slate-500">Appréciation</div>
+                  <div className="text-lg font-bold text-slate-800">{mention}</div>
+                </div>
+              </div>
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
+              <div className="space-y-3 max-h-[460px] overflow-y-auto custom-scroll pr-1">
+                {history.map((h, i) => (
+                  <div key={i} className={`rounded-2xl border p-4 ${h.ok ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                    <div className="font-semibold text-slate-800">{i + 1}. {h.prompt}</div>
+                    <div className="mt-2 text-sm text-slate-700">Type : {h.type === 'MCQ' ? 'QCM' : 'Réponse ouverte'}</div>
+                    <div className="text-sm text-slate-700">Réponse donnée : {h.userAnswer}</div>
+                    <div className="text-sm text-slate-700">Réponse attendue : {h.correct}</div>
+                    <div className="mt-2 text-sm text-slate-700">{h.explanation}</div>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={restart}
+                className="inline-flex items-center gap-2 bg-primary hover:bg-primary-dark text-white font-bold px-5 py-3 rounded-xl"
+              >
+                <RotateCcw size={18} />
+                Refaire un test final
+              </button>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    // =========================
+    // APP PRINCIPALE
+    // =========================
+
+    const App = () => {
+      const [section, setSection] = useState('learn');
+
+      const tabs = [
+        { id: 'learn', label: 'Apprendre', icon: <BookOpen size={18} /> },
+        { id: 'practice', label: 'Exercices', icon: <PenTool size={18} /> },
+        { id: 'mcq', label: 'QCM', icon: <ListChecks size={18} /> },
+        { id: 'final', label: 'Test final', icon: <Trophy size={18} /> }
+      ];
+
+      return (
+        <div className="min-h-screen">
+          <header className="sticky top-0 z-20 backdrop-blur bg-white/90 border-b border-slate-200">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col gap-4">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                <div>
+                  <h1 className="text-3xl font-serif font-bold text-primary-dark">🚀Fonctions affines : De zéro à héros🚀</h1>
+                  <p className="text-slate-600 mt-1">
+                    Apprendre, s'entraîner, réussir un QCM et terminer par un test complet.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {tabs.map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setSection(tab.id)}
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-semibold border transition ${
+                      section === tab.id
+                        ? 'bg-primary text-white border-primary'
+                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    {tab.icon}
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </header>
+
+          <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+            {section === 'learn' && <LearningSection />}
+            {section === 'practice' && <PracticeSection />}
+            {section === 'mcq' && <MCQSection />}
+            {section === 'final' && <FinalTestSection />}
+          </main>
+        </div>
+      );
+    };
+
+    createRoot(document.getElementById('root')).render(<App />);
+  </script>
 </body>
 </html>
